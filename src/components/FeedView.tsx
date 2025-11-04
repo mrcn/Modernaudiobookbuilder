@@ -28,21 +28,21 @@ export function FeedView({ clips, editions }: FeedViewProps) {
   };
 
   return (
-    <div className="max-w-[1000px] mx-auto px-8 py-12">
-      <div className="mb-12">
-        <h2 className="text-4xl tracking-tight mb-3">Feed</h2>
-        <p className="text-neutral-600 text-lg">
+    <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+      <div className="mb-8 sm:mb-12">
+        <h2 className="text-3xl sm:text-4xl tracking-tight mb-3">Feed</h2>
+        <p className="text-neutral-600 text-base sm:text-lg">
           See what others are resurrecting this week
         </p>
       </div>
 
       {/* Featured Editions Banner */}
-      <div className="mb-12">
-        <h3 className="mb-6 flex items-center gap-2">
+      <div className="mb-8 sm:mb-12">
+        <h3 className="mb-4 sm:mb-6 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
           Featured Editions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {editions.slice(0, 3).map((edition) => (
             <div
               key={edition.id}

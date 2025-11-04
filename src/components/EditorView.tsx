@@ -109,28 +109,28 @@ export function EditorView({ book, onBack, onGenerateAudio, onCreateEdition }: E
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-10">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors px-4 py-2 rounded-lg hover:bg-black/5"
+        className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6 sm:mb-8 transition-colors px-4 py-2 rounded-lg hover:bg-black/5"
       >
         <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
         <span>Back to Library</span>
       </button>
 
-      <div className="mb-10 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <h2 className="text-4xl tracking-tight">{book.title}</h2>
-            <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${book.coverGradient}`} />
+      <div className="mb-8 sm:mb-10 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+            <h2 className="text-2xl sm:text-4xl tracking-tight truncate">{book.title}</h2>
+            <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${book.coverGradient} flex-shrink-0`} />
           </div>
-          <p className="text-neutral-600 text-lg">{book.author}</p>
+          <p className="text-neutral-600 text-base sm:text-lg">{book.author}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {book.status === "audio-ready" && onCreateEdition && (
             <button
               onClick={onCreateEdition}
-              className="group relative px-6 py-4 bg-white/70 backdrop-blur-xl border border-purple-300 text-purple-700 rounded-2xl flex items-center gap-3 transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/10 hover:scale-105"
+              className="group relative px-5 sm:px-6 py-3 sm:py-4 bg-white/70 backdrop-blur-xl border border-purple-300 text-purple-700 rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/10 hover:scale-105"
             >
               <Sparkles className="w-5 h-5" strokeWidth={2.5} />
               <span>Create Edition</span>
@@ -139,18 +139,20 @@ export function EditorView({ book, onBack, onGenerateAudio, onCreateEdition }: E
           <button
             onClick={handleGenerateAudio}
             disabled={generating}
-            className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 disabled:from-neutral-300 disabled:to-neutral-400 text-white rounded-2xl flex items-center gap-3 transition-all duration-200 hover:shadow-2xl hover:shadow-purple-500/25 hover:scale-105 disabled:hover:scale-100 disabled:hover:shadow-none"
+            className="group relative px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 disabled:from-neutral-300 disabled:to-neutral-400 text-white rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 hover:shadow-2xl hover:shadow-purple-500/25 hover:scale-105 disabled:hover:scale-100 disabled:hover:shadow-none"
           >
             <div className={`absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity ${generating ? 'animate-pulse' : ''}`} />
             {generating ? (
               <>
                 <Zap className="w-5 h-5 relative z-10 animate-pulse" strokeWidth={2.5} />
-                <span className="relative z-10">Generating Audio...</span>
+                <span className="relative z-10 hidden sm:inline">Generating Audio...</span>
+                <span className="relative z-10 sm:hidden">Generating...</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-5 h-5 relative z-10" strokeWidth={2.5} />
-                <span className="relative z-10">Generate Audio</span>
+                <span className="relative z-10 hidden sm:inline">Generate Audio</span>
+                <span className="relative z-10 sm:hidden">Generate</span>
               </>
             )}
           </button>

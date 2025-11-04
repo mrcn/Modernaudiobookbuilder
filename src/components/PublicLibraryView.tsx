@@ -27,23 +27,23 @@ export function PublicLibraryView({ editions, onEditionClick }: PublicLibraryVie
   });
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-12">
-      <div className="mb-12">
-        <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-4xl tracking-tight">Public Library</h2>
-          <div className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+      <div className="mb-8 sm:mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+          <h2 className="text-3xl sm:text-4xl tracking-tight">Public Library</h2>
+          <div className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full self-start">
             <span className="text-sm bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               {editions.length} editions
             </span>
           </div>
         </div>
-        <p className="text-neutral-600 text-lg">
+        <p className="text-neutral-600 text-base sm:text-lg">
           Discover classic literature reimagined by the community
         </p>
       </div>
 
       {/* Search and Filters */}
-      <div className="mb-10 flex flex-col md:flex-row gap-4">
+      <div className="mb-8 sm:mb-10 flex flex-col gap-3 sm:gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" strokeWidth={2.5} />
           <Input
@@ -55,10 +55,10 @@ export function PublicLibraryView({ editions, onEditionClick }: PublicLibraryVie
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0">
           <button
             onClick={() => setSortBy("trending")}
-            className={`px-5 py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
               sortBy === "trending"
                 ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25"
                 : "bg-white/70 backdrop-blur-xl border border-black/10 text-neutral-700 hover:bg-black/5"
@@ -70,7 +70,7 @@ export function PublicLibraryView({ editions, onEditionClick }: PublicLibraryVie
 
           <button
             onClick={() => setSortBy("recent")}
-            className={`px-5 py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
               sortBy === "recent"
                 ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25"
                 : "bg-white/70 backdrop-blur-xl border border-black/10 text-neutral-700 hover:bg-black/5"
@@ -82,7 +82,7 @@ export function PublicLibraryView({ editions, onEditionClick }: PublicLibraryVie
 
           <button
             onClick={() => setSortBy("popular")}
-            className={`px-5 py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl flex items-center gap-2 transition-all duration-200 ${
               sortBy === "popular"
                 ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25"
                 : "bg-white/70 backdrop-blur-xl border border-black/10 text-neutral-700 hover:bg-black/5"
@@ -95,7 +95,7 @@ export function PublicLibraryView({ editions, onEditionClick }: PublicLibraryVie
       </div>
 
       {/* Editions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {sortedEditions.map((edition) => (
           <button
             key={edition.id}

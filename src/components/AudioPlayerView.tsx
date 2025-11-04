@@ -59,16 +59,16 @@ export function AudioPlayerView({ book, onBack, onCreateClip }: AudioPlayerViewP
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-10 transition-colors px-4 py-2 rounded-lg hover:bg-black/5"
+        className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6 sm:mb-10 transition-colors px-4 py-2 rounded-lg hover:bg-black/5"
       >
         <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
         <span>Back to Library</span>
       </button>
 
-      <div className="bg-white/70 backdrop-blur-xl rounded-[2rem] border border-black/5 shadow-2xl overflow-hidden">
+      <div className="bg-white/70 backdrop-blur-xl rounded-2xl sm:rounded-[2rem] border border-black/5 shadow-2xl overflow-hidden">
         {/* Album Art / Book Cover */}
         <div className="relative h-80 overflow-hidden">
           <div className={`absolute inset-0 bg-gradient-to-br ${book.coverGradient}`} />
@@ -126,60 +126,61 @@ export function AudioPlayerView({ book, onBack, onCreateClip }: AudioPlayerViewP
           </div>
 
           {/* Main Controls */}
-          <div className="flex items-center justify-center gap-6 mb-10">
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mb-8 sm:mb-10">
             <button
               onClick={skipBackward}
-              className="w-14 h-14 rounded-2xl hover:bg-black/5 flex items-center justify-center transition-all duration-200 hover:scale-110"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl hover:bg-black/5 flex items-center justify-center transition-all duration-200 hover:scale-110"
             >
-              <SkipBack className="w-6 h-6 text-neutral-700" strokeWidth={2.5} />
+              <SkipBack className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-700" strokeWidth={2.5} />
             </button>
 
             <button
               onClick={togglePlayPause}
-              className="relative group w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/25"
+              className="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/25"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
               {isPlaying ? (
-                <Pause className="w-7 h-7 text-white relative z-10" fill="white" strokeWidth={2.5} />
+                <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white relative z-10" fill="white" strokeWidth={2.5} />
               ) : (
-                <Play className="w-7 h-7 text-white ml-1 relative z-10" fill="white" strokeWidth={2.5} />
+                <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white ml-1 relative z-10" fill="white" strokeWidth={2.5} />
               )}
             </button>
 
             <button
               onClick={skipForward}
-              className="w-14 h-14 rounded-2xl hover:bg-black/5 flex items-center justify-center transition-all duration-200 hover:scale-110"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl hover:bg-black/5 flex items-center justify-center transition-all duration-200 hover:scale-110"
             >
-              <SkipForward className="w-6 h-6 text-neutral-700" strokeWidth={2.5} />
+              <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-700" strokeWidth={2.5} />
             </button>
           </div>
 
           {/* Volume & Download */}
-          <div className="flex items-center justify-between gap-8">
-            <div className="flex items-center gap-4 flex-1 max-w-sm">
-              <Volume2 className="w-5 h-5 text-neutral-600" strokeWidth={2.5} />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-8">
+            <div className="flex items-center gap-3 sm:gap-4 flex-1">
+              <Volume2 className="w-5 h-5 text-neutral-600 flex-shrink-0" strokeWidth={2.5} />
               <Slider
                 value={[volume * 100]}
                 max={100}
                 step={1}
                 onValueChange={(value) => setVolume(value[0] / 100)}
+                className="flex-1"
               />
               <span className="text-sm text-neutral-500 min-w-[3ch]">{Math.round(volume * 100)}</span>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               {onCreateClip && (
                 <button
                   onClick={onCreateClip}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-xl hover:shadow-purple-500/25 flex items-center gap-2.5 transition-all duration-200 hover:scale-105"
+                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-xl hover:shadow-purple-500/25 flex items-center justify-center gap-2 sm:gap-2.5 transition-all duration-200 hover:scale-105"
                 >
                   <Scissors className="w-4 h-4" strokeWidth={2.5} />
                   <span className="text-sm">Create Clip</span>
                 </button>
               )}
-              <button className="px-6 py-3 border border-black/10 rounded-xl hover:bg-black/5 flex items-center gap-2.5 text-neutral-700 transition-all duration-200 hover:scale-105">
+              <button className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 border border-black/10 rounded-xl hover:bg-black/5 flex items-center justify-center gap-2 sm:gap-2.5 text-neutral-700 transition-all duration-200 hover:scale-105">
                 <Download className="w-4 h-4" strokeWidth={2.5} />
-                <span className="text-sm">Download</span>
+                <span className="text-sm hidden sm:inline">Download</span>
               </button>
             </div>
           </div>
