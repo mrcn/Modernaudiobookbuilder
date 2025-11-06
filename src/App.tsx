@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Header } from "./components/Header";
 import { LibraryView } from "./components/LibraryView";
 import { UploadScreen } from "./components/UploadScreen";
+import { ProjectSetup, ProjectConfig } from "./components/ProjectSetup";
 import { EditorView } from "./components/EditorView";
 import { AudioPlayerView } from "./components/AudioPlayerView";
 import { EditionsView } from "./components/EditionsView";
@@ -69,10 +70,11 @@ export type Clip = {
   createdAt: Date;
 };
 
-type View = "library" | "upload" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
+type View = "library" | "upload" | "project-setup" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>("library");
+  const [uploadedFile, setUploadedFile] = useState<{ file: File; content: string } | null>(null);
   const [books, setBooks] = useState<Book[]>([
     {
       id: "1",
@@ -272,46 +274,58 @@ export default function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
 
-  const handleUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const gradients = [
-        "from-violet-500 via-purple-500 to-pink-500",
-        "from-emerald-400 via-teal-500 to-cyan-500",
-        "from-yellow-400 via-orange-500 to-red-500",
-        "from-indigo-500 via-blue-500 to-cyan-500",
-      ];
-      const newBook: Book = {
-        id: Date.now().toString(),
-        title: file.name.replace(/\.[^/.]+$/, ""),
-        author: "Unknown Author",
-        coverColor: `hsl(${Math.random() * 360}, 50%, 50%)`,
-        coverGradient: gradients[Math.floor(Math.random() * gradients.length)],
-        uploadedAt: new Date(),
-        status: "processing",
-        originalText: text.slice(0, 500),
-      };
+  const handleFileSelected = (file: File, content: string) => {
+    setUploadedFile({ file, content });
+    setCurrentView("project-setup");
+  };
 
-      setBooks((prev) => [newBook, ...prev]);
+  const handleProjectConfigure = (config: ProjectConfig) => {
+    if (!uploadedFile) return;
 
-      setTimeout(() => {
-        setBooks((prev) =>
-          prev.map((b) =>
-            b.id === newBook.id
-              ? {
-                  ...b,
-                  status: "modernized",
-                  modernizedText: modernizeText(text.slice(0, 500)),
-                }
-              : b
-          )
-        );
-      }, 2000);
+    const gradients = [
+      "from-violet-500 via-purple-500 to-pink-500",
+      "from-emerald-400 via-teal-500 to-cyan-500",
+      "from-yellow-400 via-orange-500 to-red-500",
+      "from-indigo-500 via-blue-500 to-cyan-500",
+    ];
 
-      setCurrentView("library");
+    // Calculate the portion of text based on range
+    const text = uploadedFile.content;
+    const startIndex = Math.floor((text.length * config.startPosition) / 100);
+    const endIndex = Math.floor((text.length * config.endPosition) / 100);
+    const selectedText = text.slice(startIndex, endIndex);
+
+    const newBook: Book = {
+      id: Date.now().toString(),
+      title: config.title,
+      author: config.author,
+      coverColor: `hsl(${Math.random() * 360}, 50%, 50%)`,
+      coverGradient: gradients[Math.floor(Math.random() * gradients.length)],
+      uploadedAt: new Date(),
+      status: "processing",
+      originalText: selectedText.slice(0, 2000), // Store a preview
     };
-    reader.readAsText(file);
+
+    setBooks((prev) => [newBook, ...prev]);
+    setSelectedBook(newBook);
+
+    // Simulate processing with the config
+    setTimeout(() => {
+      setBooks((prev) =>
+        prev.map((b) =>
+          b.id === newBook.id
+            ? {
+                ...b,
+                status: "modernized",
+                modernizedText: modernizeText(selectedText.slice(0, 2000)),
+              }
+            : b
+        )
+      );
+    }, 2000);
+
+    setUploadedFile(null);
+    setCurrentView("editor");
   };
 
   const modernizeText = (text: string): string => {
@@ -408,17 +422,19 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        <Header
-          currentView={currentView}
-          onNavigate={(view) => {
-            setCurrentView(view);
-            if (view === "library") {
-              setSelectedBook(null);
-              setSelectedEdition(null);
-            }
-          }}
-          selectedBook={selectedBook}
-        />
+        {currentView !== "project-setup" && (
+          <Header
+            currentView={currentView}
+            onNavigate={(view) => {
+              setCurrentView(view);
+              if (view === "library") {
+                setSelectedBook(null);
+                setSelectedEdition(null);
+              }
+            }}
+            selectedBook={selectedBook}
+          />
+        )}
 
         <main>
           {currentView === "library" && (
@@ -431,8 +447,21 @@ export default function App() {
 
           {currentView === "upload" && (
             <UploadScreen
-              onUpload={handleUpload}
+              onFileSelected={handleFileSelected}
               onCancel={() => setCurrentView("library")}
+            />
+          )}
+
+          {currentView === "project-setup" && uploadedFile && (
+            <ProjectSetup
+              fileName={uploadedFile.file.name}
+              fileSize={uploadedFile.file.size}
+              fileContent={uploadedFile.content}
+              onConfigure={handleProjectConfigure}
+              onCancel={() => {
+                setUploadedFile(null);
+                setCurrentView("upload");
+              }}
             />
           )}
 
