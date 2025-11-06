@@ -77,10 +77,11 @@ Audibler
 ├── Library (Personal)
 │   ├── Upload New Book
 │   │   └── Project Setup
-│   │       └── Editor View
-│   │           └── Audio Player View
+│   │       └── Chunk Review
+│   │           └── Audio Segment Builder
+│   │               └── Audio Player View
 │   └── Browse Existing Books
-│       ├── Editor View (for modernized books)
+│       ├── Chunk Review (for uploaded/processing/modernized books)
 │       └── Audio Player View (for audio-ready books)
 │
 ├── Editions (Personal Published Works)
@@ -100,25 +101,27 @@ Audibler
 
 ```
 App.tsx (Root)
-├── Header (persistent, except during project-setup)
+├── Header (persistent, except during project-setup, chunk-review, batch-builder)
 └── Main Content Area
     ├── LibraryView
     ├── UploadScreen
     ├── ProjectSetup
-    ├── EditorView
+    ├── ChunkReview
+    ├── BatchBuilder (Audio Segment Builder)
     ├── AudioPlayerView
     ├── EditionsView
     ├── PublicLibraryView
     ├── FeedView
     ├── EditionCreator
-    └── ClipCreator
+    ├── ClipCreator
+    └── EditorView (deprecated - kept for backward compatibility)
 ```
 
 ### User Journey Map
 
 #### Primary Flow: Upload to Audio
 ```
-1. Library → 2. Upload → 3. Project Setup → 4. Editor → 5. Audio Player
+1. Library → 2. Upload → 3. Project Setup → 4. Chunk Review → 5. Audio Segment Builder → 6. Audio Player
 ```
 
 #### Publishing Flow
@@ -474,25 +477,34 @@ type ProjectConfig = {
    - Review cost estimate
 6. User clicks "Configure Project"
 7. Book added to Library with "processing" status
-8. Navigate to Editor View
+8. Navigate to Chunk Review
 9. System simulates AI modernization (2 seconds)
 10. Book status updates to "modernized"
-11. User reviews modernized text in Editor
-12. User clicks "Generate Audio"
-13. Audio generation completes
-14. Book status updates to "audio-ready"
-15. User can now listen in Audio Player View
+11. User reviews modernized chunks:
+    - See metrics at top (total chunks, words, batches, failures)
+    - Browse chunk list (center panel)
+    - Select chunks to review/edit (right detail panel)
+    - Edit modernized text if needed
+12. User clicks "Build Audio Segments"
+13. Navigate to Audio Segment Builder (BatchBuilder)
+14. User configures batch settings and clicks "Submit X Batches"
+15. Audio generation completes
+16. Book status updates to "audio-ready"
+17. Navigate to Audio Player View
+18. User can now listen to audiobook
 
 **Success Criteria:**
 - Book appears in Library
 - Status progresses through states
-- Modernized text is reviewable
+- Chunks are reviewable and editable
+- Batch configuration is accurate
 - Audio is playable
 
 **Error Handling:**
 - Invalid file format → Show error message
 - File too large → Show size limit warning
 - Processing failure → Retry option
+- Batch exceeds limits → Warning in preview
 
 ---
 
@@ -528,40 +540,60 @@ type ProjectConfig = {
 
 ### Flow 3: Generate Audio (Batch Process)
 
-**Goal:** Convert modernized text to audio using TTS
+**Goal:** Generate audio segments based on desired duration and selected batches
 
 **Steps:**
-1. User clicks "Generate Audio" in Editor View
-2. Navigate to BatchBuilder
-3. User configures batching:
-   - Target audio duration per batch (10-120s)
-   - Max duration limit (30-300s)
-   - Chunking mode (sentence vs character window)
-   - Keep ranges together toggle
-4. User reviews batch preview:
-   - Total batches
-   - Average duration
-   - Total audio time
-   - Estimated cost
-   - Duration distribution heatmap
-5. User checks for "over limit" warnings
-6. User adjusts settings if needed
-7. User clicks "Submit X Batches"
-8. System processes batches (simulated)
-9. Book status updates to "audio-ready"
-10. Navigate to Audio Player View
+1. User in Chunk Review clicks "Build Audio Segments"
+2. Navigate to Audio Segment Builder (BatchBuilder)
+3. User sets target audio duration:
+   - Slider: 5-120 minutes
+   - Example: User selects "20 minutes"
+   - System calculates: 20 min × 150 wpm = 3,000 words needed
+   - System determines: 6 chunks needed (500 words each)
+   - System creates optimized batches (~45s each)
+4. System auto-selects all generated batches
+5. User reviews statistics:
+   - Selected batches count
+   - Total audio duration
+   - Total words
+   - Total cost
+   - Average duration per batch
+   - Duration range
+6. User reviews batch list:
+   - Each batch shows chunk range, words, duration, cost
+   - All batches initially selected
+7. User can deselect specific batches (optional):
+   - Click to toggle selection
+   - Shift-click for range selection
+   - Use "Select All" or "Clear" buttons
+8. Statistics update live based on selection
+9. User clicks "Generate X Batches" (X = selected count)
+10. System processes selected batches (simulated)
+11. Book status updates to "audio-ready"
+12. Navigate to Audio Player View
 
 **Success Criteria:**
-- Accurate cost estimation
-- No batches exceed provider limits
-- Processing completes successfully
+- Duration-based calculation is accurate
+- All batches are optimal size (~45s audio each)
+- Cost estimation matches selection
+- Only selected batches are processed
 - Audio segments are playable
 
 **Calculations:**
-- 150 words per minute = 2.5 words per second
-- Each chunk ≈ 500 words ≈ 2000 characters
-- Duration = words / 2.5
+- Reading speed: 150 words per minute = 2.5 words per second
+- Target duration (minutes) → Total words needed = minutes × 150
+- Chunks needed = words / 500 (each chunk ≈ 500 words)
+- Batch optimization: ~45s audio per batch (sweet spot for TTS)
+- Each chunk: 500 words ≈ 2000 characters
+- Duration = words / 2.5 seconds
 - Cost = (characters / 1,000,000) × $15
+
+**Example:**
+- User wants 20 minutes of audio
+- 20 × 150 = 3,000 words needed
+- 3,000 / 500 = 6 chunks needed
+- Creates ~3 batches (2 chunks each, ~200s audio per batch)
+- User can deselect batches to generate less if desired
 
 ---
 
@@ -836,9 +868,80 @@ type ProjectConfig = {
 
 ---
 
-### 4. EditorView
+### 4. ChunkReview
+
+**Purpose:** Overview and review of all modernized text chunks before audio generation
+
+**Layout:**
+- Full-screen, no Header
+- Back button to Library (top left)
+- "Build Audio Segments" CTA button (top right, gradient)
+- Metrics section (top, below header)
+- Two-panel layout: Chunk List + Detail Panel
+
+**Metrics Section:**
+- Grid of metric cards (responsive: 2/3/6 columns)
+  * Total Chunks
+  * Total Words
+  * Total Tokens
+  * Est. Cost
+  * Batches (completed/total)
+  * Edited chunks count
+  
+- Status breakdown badges (horizontal scrollable)
+  * Completed (green)
+  * Processing (blue)
+  * Pending (gray)
+  * Failed (red, if any)
+  * Edited (purple, if any)
+
+**Main Content:**
+
+**Center Panel: Chunk List (full-width)**
+- Scrollable list of all chunks
+- Each chunk card shows:
+  * Chunk ID
+  * First line of text preview
+  * Status badge
+  * Word/character count
+  * Batch assignment (if any)
+- Click to select (supports multi-select)
+- Shift-click for range selection
+
+**Right Panel: Chunk Detail (appears when chunks selected)**
+- Selected chunk(s) info
+- Tabs: Modernized / Original / Side-by-Side
+- Editable text area
+- Word count, character count
+- Save/Close actions
+
+**Interactions:**
+- Click chunk: Select/deselect
+- Shift-click: Range select
+- Edit text: Update chunk, mark as edited
+- Build Audio Segments: Navigate to BatchBuilder
+
+**States:**
+- No selection: Only chunk list visible
+- Selection: Detail panel slides in from right
+- Loading: Skeleton cards
+
+**Removed from Original Design:**
+- Left sidebar filters (moved to top metrics)
+- Search functionality (simplified for v1)
+- Batch Organizer toggle (integrated into flow)
+
+**Responsive:**
+- Mobile: Stacked layout, detail panel as modal
+- Tablet/Desktop: Side-by-side panels
+
+---
+
+### 5. EditorView (DEPRECATED)
 
 **Purpose:** Review and edit modernized text
+
+**Status:** This view has been deprecated and replaced by ChunkReview. It is kept in the codebase for backward compatibility but is no longer used in the primary flow. All editing now happens in ChunkReview.
 
 **Layout:**
 - Header with book title
@@ -878,53 +981,88 @@ type ProjectConfig = {
 
 ---
 
-### 5. BatchBuilder
+### 6. BatchBuilder (Audio Segment Builder)
 
-**Purpose:** Configure TTS batch processing
+**Purpose:** Configure audio generation by selecting target duration and specific batches to process
+
+**Note:** This is called "Audio Segment Builder" in the UI flow, but the component is named BatchBuilder.
 
 **Layout:**
-- Header with back button and title
-- Submit button (CTA) at top right
-- Scrollable content area
+- Full-screen, no Header
+- Back button to Chunk Review (top left)
+- "Generate X Batches" CTA button (top right, gradient)
+- Target Duration Control section
+- Statistics section
+- Selectable batch list (main content)
 
 **Sections:**
 
-1. **Batch Configuration Card**
-   - Target Audio Duration slider (10-120s)
-   - Max Duration Limit slider (30-300s)
-   - Chunking Mode buttons (Sentence / Character Window)
-   - Keep Ranges Together toggle
+1. **Header**
+   - Title: "Audio Segment Builder"
+   - Subtitle: "Select target duration and batches to generate"
+   - Back button → Chunk Review
+   - Generate button (shows count of selected batches)
 
-2. **Batch Preview Card**
-   - Statistics grid (5 cards):
-     * Total Batches
-     * Avg Duration
-     * Total Audio
-     * Est. Cost
-     * Over Limit count
-   - Duration Distribution heatmap
-     * Color-coded bars (green/yellow/red)
-     * Min/max labels
-   - Over Limit warning (if any)
+2. **Target Duration Control**
+   - Large slider: 5-120 minutes
+   - Large display: Current minutes selection
+   - Helper text: "How much audio do you want to generate?"
+   - Shows chunks needed for target duration
+   - Auto-calculates batches based on target
 
-3. **Batch List Preview Card**
-   - First 20 batches listed
-   - Each shows: ID, chunk range, words, duration, cost
-   - "...and X more" indicator
+3. **Statistics Grid** (6 metrics)
+   - Selected batches (X/Total)
+   - Total Audio duration
+   - Total Words
+   - Total Cost
+   - Avg Duration per batch
+   - Duration Range (min—max)
+
+4. **Batch Selection List**
+   - Header with "Select All" and "Clear" buttons
+   - Scrollable list of all batches
+   - Each batch row shows:
+     * Checkbox (selectable)
+     * Batch ID
+     * Chunk range (e.g., "Chunks 0—4")
+     * Word count badge
+     * Duration badge
+     * Cost (right side)
+     * Character count (right side, desktop only)
+   - Multi-select support:
+     * Click to toggle
+     * Shift-click for range selection
+   - Selected batches highlighted (purple background, left border)
+
+**Behavior:**
+
+**Duration-Based Calculation:**
+- User sets target minutes (e.g., 20 minutes)
+- System calculates: 20 min × 150 words/min = 3,000 words needed
+- System determines chunks needed: 3,000 ÷ 500 words/chunk = 6 chunks
+- System creates optimal batches (45s audio each, ~112 words/batch)
+- All batches auto-selected initially
+
+**Batch Selection:**
+- Click batch: Toggle selection
+- Shift-click: Range select
+- Select All: Select all generated batches
+- Clear: Deselect all
+- Stats update live based on selection
 
 **Interactions:**
-- Sliders update preview live
-- Mode buttons toggle state
-- Heatmap bars show hover tooltip
-- Submit creates audio segments, navigates to player
+- Change target duration → Recalculates batches → Auto-selects all new batches
+- Select/deselect batches → Updates statistics
+- Generate → Submits only selected batches → Navigates to player
 
 **Responsive:**
-- Stats grid: 2 cols (mobile) → 3 cols (tablet) → 5 cols (desktop)
-- Batch list items: stacked (mobile) → horizontal (desktop)
+- Stats grid: 2 cols (mobile) → 3 cols (tablet) → 6 cols (desktop)
+- Batch list: Full-width items, simplified on mobile (hide some metadata)
+- Duration slider: Full-width, large touch target
 
 ---
 
-### 6. AudioPlayerView
+### 7. AudioPlayerView
 
 **Purpose:** Listen to generated audiobook
 
@@ -978,7 +1116,7 @@ type ProjectConfig = {
 
 ---
 
-### 7. EditionsView
+### 8. EditionsView
 
 **Purpose:** Manage user's published Editions
 
@@ -1008,7 +1146,7 @@ type ProjectConfig = {
 
 ---
 
-### 8. PublicLibraryView
+### 9. PublicLibraryView
 
 **Purpose:** Discover community Editions
 
@@ -1043,7 +1181,7 @@ type ProjectConfig = {
 
 ---
 
-### 9. FeedView
+### 10. FeedView
 
 **Purpose:** Social feed for discovering Clips
 
@@ -1089,7 +1227,7 @@ type ProjectConfig = {
 
 ---
 
-### 10. EditionCreator
+### 11. EditionCreator
 
 **Purpose:** Publish a book as an Edition
 
@@ -1124,7 +1262,7 @@ type ProjectConfig = {
 
 ---
 
-### 11. ClipCreator
+### 12. ClipCreator
 
 **Purpose:** Create shareable audio excerpt
 

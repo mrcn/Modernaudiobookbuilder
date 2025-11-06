@@ -3,6 +3,8 @@ import { Header } from "./components/Header";
 import { LibraryView } from "./components/LibraryView";
 import { UploadScreen } from "./components/UploadScreen";
 import { ProjectSetup, ProjectConfig } from "./components/ProjectSetup";
+import { ChunkReview, Chunk } from "./components/ChunkReview";
+import { BatchBuilder } from "./components/BatchBuilder";
 import { EditorView } from "./components/EditorView";
 import { AudioPlayerView } from "./components/AudioPlayerView";
 import { EditionsView } from "./components/EditionsView";
@@ -70,7 +72,7 @@ export type Clip = {
   createdAt: Date;
 };
 
-type View = "library" | "upload" | "project-setup" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
+type View = "library" | "upload" | "project-setup" | "chunk-review" | "batch-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>("library");
@@ -273,6 +275,46 @@ export default function App() {
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
+  
+  // Mock chunks for chunk review
+  const [chunks, setChunks] = useState<Chunk[]>([
+    {
+      id: 0,
+      originalText: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+      modernizedText: "Everyone knows that a wealthy single man must be looking for a wife.",
+      charCount: 450,
+      tokenCount: 112,
+      wordCount: 85,
+      estimatedCost: 0.05,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 1,
+      originalText: "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.",
+      modernizedText: "No matter how little is known about such a man when he first arrives in a neighborhood, the local families are convinced that he belongs with one of their daughters.",
+      charCount: 520,
+      tokenCount: 130,
+      wordCount: 95,
+      estimatedCost: 0.06,
+      edited: true,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 2,
+      originalText: "My dear Mr. Bennet, said his lady to him one day, have you heard that Netherfield Park is let at last?",
+      modernizedText: "My dear Mr. Bennet, his wife said to him one day, have you heard that Netherfield Park has finally been rented?",
+      charCount: 380,
+      tokenCount: 95,
+      wordCount: 70,
+      estimatedCost: 0.04,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+  ]);
 
   const handleFileSelected = (file: File, content: string) => {
     setUploadedFile({ file, content });
@@ -325,7 +367,7 @@ export default function App() {
     }, 2000);
 
     setUploadedFile(null);
-    setCurrentView("editor");
+    setCurrentView("chunk-review");
   };
 
   const modernizeText = (text: string): string => {
@@ -342,8 +384,10 @@ export default function App() {
     setSelectedBook(book);
     if (book.status === "audio-ready") {
       setCurrentView("player");
+    } else if (book.status === "modernized" || book.status === "processing") {
+      setCurrentView("chunk-review");
     } else {
-      setCurrentView("editor");
+      setCurrentView("chunk-review");
     }
   };
 
@@ -412,6 +456,61 @@ export default function App() {
     setCurrentView("feed");
   };
 
+  const handleEditChunk = (chunkId: number, newText: string) => {
+    setChunks((prev) =>
+      prev.map((chunk) =>
+        chunk.id === chunkId
+          ? { ...chunk, modernizedText: newText, edited: true }
+          : chunk
+      )
+    );
+  };
+
+  const handleProceedToAudioBuilder = () => {
+    setCurrentView("batch-builder");
+  };
+
+  const handleSubmitBatches = (batches: any[]) => {
+    // Simulate audio generation
+    if (selectedBook) {
+      setBooks((prev) =>
+        prev.map((b) =>
+          b.id === selectedBook.id
+            ? {
+                ...b,
+                status: "audio-ready",
+                audioSegments: [
+                  {
+                    id: "seg-" + Date.now(),
+                    chunkIndex: 0,
+                    audioUrl: "mock-audio.mp3",
+                    duration: 5.5,
+                  },
+                ],
+              }
+            : b
+        )
+      );
+      setSelectedBook((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "audio-ready",
+              audioSegments: [
+                {
+                  id: "seg-" + Date.now(),
+                  chunkIndex: 0,
+                  audioUrl: "mock-audio.mp3",
+                  duration: 5.5,
+                },
+              ],
+            }
+          : null
+      );
+      setCurrentView("player");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-purple-50/30 to-pink-50/30">
       {/* Ambient background blur elements */}
@@ -422,7 +521,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        {currentView !== "project-setup" && (
+        {currentView !== "project-setup" && currentView !== "chunk-review" && currentView !== "batch-builder" && (
           <Header
             currentView={currentView}
             onNavigate={(view) => {
@@ -465,6 +564,23 @@ export default function App() {
             />
           )}
 
+          {currentView === "chunk-review" && selectedBook && (
+            <ChunkReview
+              chunks={chunks}
+              onBack={() => setCurrentView("library")}
+              onEditChunk={handleEditChunk}
+              onProceedToAudioBuilder={handleProceedToAudioBuilder}
+            />
+          )}
+
+          {currentView === "batch-builder" && (
+            <BatchBuilder
+              totalChunks={chunks.length}
+              onBack={() => setCurrentView("chunk-review")}
+              onSubmitBatches={handleSubmitBatches}
+            />
+          )}
+
           {currentView === "editor" && selectedBook && (
             <EditorView
               book={selectedBook}
@@ -480,7 +596,7 @@ export default function App() {
           {currentView === "player" && selectedBook && (
             <AudioPlayerView
               book={selectedBook}
-              onBack={() => setCurrentView("library")}
+              onBack={() => setCurrentView("chunk-review")}
               onCreateClip={() => setCurrentView("create-clip")}
             />
           )}

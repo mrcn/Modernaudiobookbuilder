@@ -57,7 +57,7 @@ export function ChunkList({ chunks, selectedChunkIds, onChunkSelect, batches }: 
             return (
               <div
                 key={chunk.id}
-                onClick={(e) => onChunkSelect(chunk.id, e.shiftKey)}
+                onClick={() => onChunkSelect(chunk.id, false)}
                 className={`group border-b border-neutral-200 px-4 py-3 cursor-pointer transition-all ${
                   isSelected
                     ? "bg-purple-50 border-l-4 border-l-purple-600"
@@ -65,19 +65,6 @@ export function ChunkList({ chunks, selectedChunkIds, onChunkSelect, batches }: 
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Selection Indicator */}
-                  <div className="flex-shrink-0 mt-1">
-                    <div
-                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                        isSelected
-                          ? "bg-purple-600 border-purple-600"
-                          : "border-neutral-400 group-hover:border-purple-400"
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                    </div>
-                  </div>
-
                   {/* Status Indicator */}
                   <div className="flex-shrink-0 mt-1.5">
                     <div className={`w-2 h-2 rounded-full ${getStatusColor(chunk.status)}`} />
