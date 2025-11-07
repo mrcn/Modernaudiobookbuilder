@@ -133,8 +133,8 @@ export function ChunkReview({
   onModernizeChunks,
   onRegenerateChunk,
 }: ChunkReviewProps) {
-  // Use provided chunks or generate mock chunks for testing
-  const [chunks, setChunks] = useState<Chunk[]>(providedChunks || generateMockChunks());
+  // ALWAYS use provided chunks from App.tsx - no fallback
+  const [chunks, setChunks] = useState<Chunk[]>(providedChunks || []);
   const [selectedChunkIds, setSelectedChunkIds] = useState<Set<number>>(new Set());
   const [expandedChunkId, setExpandedChunkId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

@@ -52,7 +52,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
       // TTS cost: $15 per 1M characters
       const estimatedCost = (totalChars / 1000000) * 15;
       
-      // Assign mock statuses for demo purposes
+      // Assign diverse mock statuses for comprehensive demo
       let status: AudioSegmentStatus = "pending";
       let progress: number | undefined;
       let audioUrl: string | undefined;
@@ -60,20 +60,33 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
 
       const segmentIndex = segments.length;
       
-      if (segmentIndex < 2) {
-        // First 2 segments are completed
+      // Show variety of statuses
+      if (segmentIndex < 4) {
+        // First 4 segments completed
         status = "completed";
         audioUrl = `mock-audio-${segmentIndex}.mp3`;
-      } else if (segmentIndex === 2) {
-        // Third segment is processing
+      } else if (segmentIndex === 4) {
+        // 5th segment processing at 25%
+        status = "processing";
+        progress = 25;
+      } else if (segmentIndex === 5) {
+        // 6th segment processing at 67%
         status = "processing";
         progress = 67;
-      } else if (segmentIndex === 3) {
-        // Fourth segment failed
+      } else if (segmentIndex === 6) {
+        // 7th segment processing at 89%
+        status = "processing";
+        progress = 89;
+      } else if (segmentIndex === 7) {
+        // 8th segment failed - rate limit
         status = "failed";
-        errorMessage = "TTS generation failed: Rate limit exceeded";
+        errorMessage = "TTS generation failed: Rate limit exceeded. Please try again in a few moments.";
+      } else if (segmentIndex === 8) {
+        // 9th segment failed - network error
+        status = "failed";
+        errorMessage = "Network timeout: Unable to reach TTS service. Check your connection.";
       }
-      // Rest remain pending
+      // Rest (9+) remain pending
       
       segments.push({
         id: segments.length,
@@ -245,7 +258,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
 
         {/* Stats Bar */}
         <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4 mb-4">
             <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
               <p className="text-xs text-neutral-600 mb-1">Total Segments</p>
               <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{stats.totalSegments}</p>
@@ -264,6 +277,11 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
             <div className="bg-amber-50 rounded-xl border border-amber-200 p-3 sm:p-4 shadow-sm">
               <p className="text-xs text-amber-700 mb-1">Pending</p>
               <p className="text-xl sm:text-2xl tabular-nums text-amber-900">{stats.pending}</p>
+            </div>
+
+            <div className="bg-red-50 rounded-xl border border-red-200 p-3 sm:p-4 shadow-sm">
+              <p className="text-xs text-red-700 mb-1">Failed</p>
+              <p className="text-xl sm:text-2xl tabular-nums text-red-900">{stats.failed}</p>
             </div>
 
             <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">

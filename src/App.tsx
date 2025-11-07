@@ -76,7 +76,7 @@ export type Clip = {
 type View = "library" | "upload" | "project-setup" | "chunk-review" | "segment-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>("library");
+  const [currentView, setCurrentView] = useState<View>("chunk-review");
   const [uploadedFile, setUploadedFile] = useState<{ file: File; content: string } | null>(null);
   // Helper to generate sample chunks for demo books
   const generateSampleChunks = (text: string, count: number = 5): Chunk[] => {
@@ -311,16 +311,17 @@ export default function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedEdition, setSelectedEdition] = useState<Edition | null>(null);
   
-  // Mock chunks for chunk review
+  // Mock chunks for chunk review - Comprehensive examples showing all states from a full book
   const [chunks, setChunks] = useState<Chunk[]>([
+    // COMPLETED CHUNKS (0-29) - Successfully modernized
     {
       id: 0,
       originalText: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
       modernizedText: "Everyone knows that a wealthy single man must be looking for a wife.",
-      charCount: 450,
-      tokenCount: 112,
-      wordCount: 85,
-      estimatedCost: 0.05,
+      charCount: 115,
+      tokenCount: 28,
+      wordCount: 22,
+      estimatedCost: 0.0012,
       edited: false,
       flagged: false,
       status: "completed",
@@ -329,10 +330,10 @@ export default function App() {
       id: 1,
       originalText: "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.",
       modernizedText: "No matter how little is known about such a man when he first arrives in a neighborhood, the local families are convinced that he belongs with one of their daughters.",
-      charCount: 520,
-      tokenCount: 130,
-      wordCount: 95,
-      estimatedCost: 0.06,
+      charCount: 263,
+      tokenCount: 51,
+      wordCount: 42,
+      estimatedCost: 0.0024,
       edited: true,
       flagged: false,
       status: "completed",
@@ -341,13 +342,583 @@ export default function App() {
       id: 2,
       originalText: "My dear Mr. Bennet, said his lady to him one day, have you heard that Netherfield Park is let at last?",
       modernizedText: "My dear Mr. Bennet, his wife said to him one day, have you heard that Netherfield Park has finally been rented?",
-      charCount: 380,
-      tokenCount: 95,
-      wordCount: 70,
-      estimatedCost: 0.04,
+      charCount: 103,
+      tokenCount: 24,
+      wordCount: 19,
+      estimatedCost: 0.0011,
       edited: false,
       flagged: false,
       status: "completed",
+    },
+    {
+      id: 3,
+      originalText: "Mr. Bennet replied that he had not. But it is, returned she; for Mrs. Long has just been here, and she told me all about it.",
+      modernizedText: "Mr. Bennet replied that he hadn't. But it is, she responded; Mrs. Long was just here and told me everything about it.",
+      charCount: 124,
+      tokenCount: 30,
+      wordCount: 24,
+      estimatedCost: 0.0013,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 4,
+      originalText: "Mr. Bennet made no answer. Do you not want to know who has taken it? cried his wife impatiently. You want to tell me, and I have no objection to hearing it.",
+      modernizedText: "Mr. Bennet didn't answer. Don't you want to know who rented it? his wife cried impatiently. You want to tell me, and I don't mind hearing it.",
+      charCount: 159,
+      tokenCount: 38,
+      wordCount: 30,
+      estimatedCost: 0.0017,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 5,
+      originalText: "This was invitation enough. Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
+      modernizedText: "That was all the encouragement she needed. Well, my dear, you must know that Mrs. Long says Netherfield has been rented by a wealthy young man from northern England.",
+      charCount: 156,
+      tokenCount: 37,
+      wordCount: 29,
+      estimatedCost: 0.0016,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 6,
+      originalText: "He came down on Monday in a chaise and four to see the place, and was so much delighted with it, that he agreed with Mr. Morris immediately.",
+      modernizedText: "He arrived on Monday in an elegant carriage to see the place, and liked it so much that he immediately agreed with Mr. Morris.",
+      charCount: 142,
+      tokenCount: 34,
+      wordCount: 27,
+      estimatedCost: 0.0015,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 7,
+      originalText: "He is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.",
+      modernizedText: "He'll move in before Michaelmas, and some of his servants will be at the house by the end of next week.",
+      charCount: 118,
+      tokenCount: 28,
+      wordCount: 22,
+      estimatedCost: 0.0012,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 8,
+      originalText: "What is his name? Bingley. Is he married or single? Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
+      modernizedText: "What's his name? Bingley. Is he married or single? Oh! Single, my dear, definitely! A single man with a large fortune—four or five thousand a year. What wonderful news for our girls!",
+      charCount: 182,
+      tokenCount: 46,
+      wordCount: 36,
+      estimatedCost: 0.0020,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 9,
+      originalText: "How so? How can it affect them? My dear Mr. Bennet, replied his wife, how can you be so tiresome! You must know that I am thinking of his marrying one of them.",
+      modernizedText: "How so? How does it affect them? My dear Mr. Bennet, his wife replied, how can you be so annoying! You must know I'm thinking about him marrying one of our daughters.",
+      charCount: 162,
+      tokenCount: 39,
+      wordCount: 31,
+      estimatedCost: 0.0017,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 10,
+      originalText: "Is that his design in settling here? Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
+      modernizedText: "Is that why he's settling here? Design! Nonsense, how can you say that! But he might very well fall in love with one of them, so you must visit him as soon as he arrives.",
+      charCount: 196,
+      tokenCount: 47,
+      wordCount: 37,
+      estimatedCost: 0.0021,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 11,
+      originalText: "I see no occasion for that. You and the girls may go, or you may send them by themselves, which perhaps will be still better, for as you are as handsome as any of them, Mr. Bingley may like you the best of the party.",
+      modernizedText: "I don't see why I should. You and the girls can go, or you can send them alone, which might actually be better since you're as attractive as any of them—Mr. Bingley might prefer you.",
+      charCount: 223,
+      tokenCount: 54,
+      wordCount: 43,
+      estimatedCost: 0.0024,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 12,
+      originalText: "My dear, you flatter me. I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now. When a woman has five grown-up daughters, she ought to give over thinking of her own beauty.",
+      modernizedText: "My dear, you flatter me. I was certainly attractive once, but I don't pretend to be anything special now. When a woman has five grown daughters, she should stop thinking about her own looks.",
+      charCount: 221,
+      tokenCount: 53,
+      wordCount: 42,
+      estimatedCost: 0.0023,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 13,
+      originalText: "In such cases, a woman has not often much beauty to think of. But, my dear, you must indeed go and see Mr. Bingley when he comes into the neighbourhood.",
+      modernizedText: "In such cases, a woman doesn't usually have much beauty left to think about. But my dear, you really must go see Mr. Bingley when he arrives in the neighborhood.",
+      charCount: 153,
+      tokenCount: 37,
+      wordCount: 29,
+      estimatedCost: 0.0016,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 14,
+      originalText: "It is more than I engage for, I assure you. But consider your daughters. Only think what an establishment it would be for one of them.",
+      modernizedText: "I can't promise that, I assure you. But think about your daughters. Just imagine what a great match it would be for one of them.",
+      charCount: 137,
+      tokenCount: 33,
+      wordCount: 26,
+      estimatedCost: 0.0014,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 15,
+      originalText: "Sir William and Lady Lucas are determined to go, merely on that account, for in general, you know, they visit no newcomers. Indeed you must go, for it will be impossible for us to visit him if you do not.",
+      modernizedText: "Sir William and Lady Lucas are determined to go just for that reason—you know they normally never visit newcomers. You really must go, because we can't visit him if you don't.",
+      charCount: 207,
+      tokenCount: 50,
+      wordCount: 39,
+      estimatedCost: 0.0022,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 16,
+      originalText: "You are over-scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls.",
+      modernizedText: "You're being too cautious, surely. I'm sure Mr. Bingley will be happy to see you, and I'll send a note with you to let him know I heartily approve of him marrying whichever daughter he chooses.",
+      charCount: 208,
+      tokenCount: 50,
+      wordCount: 39,
+      estimatedCost: 0.0022,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 17,
+      originalText: "Though I must throw in a good word for my little Lizzy. I desire you will do no such thing. Lizzy is not a bit better than the others.",
+      modernizedText: "Though I should put in a good word for my little Lizzy. I want you to do no such thing. Lizzy isn't any better than the others.",
+      charCount: 137,
+      tokenCount: 33,
+      wordCount: 26,
+      estimatedCost: 0.0014,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 18,
+      originalText: "And I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.",
+      modernizedText: "And I'm sure she's not half as beautiful as Jane, or half as cheerful as Lydia. But you always favor her.",
+      charCount: 135,
+      tokenCount: 32,
+      wordCount: 25,
+      estimatedCost: 0.0014,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 19,
+      originalText: "They have none of them much to recommend them, replied he; they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.",
+      modernizedText: "None of them have much to recommend them, he replied. They're all silly and ignorant like other girls, but Lizzy is a bit sharper than her sisters.",
+      charCount: 170,
+      tokenCount: 41,
+      wordCount: 32,
+      estimatedCost: 0.0018,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 20,
+      originalText: "Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion for my poor nerves.",
+      modernizedText: "Mr. Bennet, how can you criticize your own children like that? You enjoy annoying me. You have no sympathy for my nerves.",
+      charCount: 138,
+      tokenCount: 33,
+      wordCount: 26,
+      estimatedCost: 0.0014,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 21,
+      originalText: "You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these last twenty years at least.",
+      modernizedText: "You misunderstand me, my dear. I have great respect for your nerves. They're old friends of mine. I've heard you talk about them constantly for at least twenty years.",
+      charCount: 169,
+      tokenCount: 41,
+      wordCount: 32,
+      estimatedCost: 0.0018,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 22,
+      originalText: "Ah, you do not know what I suffer. But I hope you will get over it, and live to see many young men of four thousand a year come into the neighbourhood.",
+      modernizedText: "Ah, you don't know how I suffer. But I hope you'll get over it and live to see many young men worth four thousand a year move into the neighborhood.",
+      charCount: 153,
+      tokenCount: 37,
+      wordCount: 29,
+      estimatedCost: 0.0016,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 23,
+      originalText: "It will be no use to us, if twenty such should come, since you will not visit them. I am sick of Mr. Bingley.",
+      modernizedText: "It won't do us any good if twenty such men come, since you won't visit them. I'm sick of hearing about Mr. Bingley.",
+      charCount: 109,
+      tokenCount: 26,
+      wordCount: 20,
+      estimatedCost: 0.0011,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 24,
+      originalText: "I am sorry to hear that; but why did not you tell me that before? If I had known as much this morning I certainly would not have called on him.",
+      modernizedText: "I'm sorry to hear that. But why didn't you tell me earlier? If I'd known this morning, I definitely wouldn't have visited him.",
+      charCount: 147,
+      tokenCount: 35,
+      wordCount: 28,
+      estimatedCost: 0.0015,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 25,
+      originalText: "It is unlucky; but as I have actually paid the visit, we cannot escape the acquaintance now. Mr. Bennet was among the earliest of those who waited on Mr. Bingley.",
+      modernizedText: "It's unfortunate, but since I've already made the visit, we can't avoid knowing him now. Mr. Bennet was among the first to call on Mr. Bingley.",
+      charCount: 162,
+      tokenCount: 39,
+      wordCount: 31,
+      estimatedCost: 0.0017,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 26,
+      originalText: "He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it.",
+      modernizedText: "He'd always planned to visit, though he kept telling his wife he wouldn't. She didn't find out about the visit until the evening after it happened.",
+      charCount: 178,
+      tokenCount: 43,
+      wordCount: 34,
+      estimatedCost: 0.0019,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 27,
+      originalText: "It was then disclosed in the following manner. Observing his second daughter employed in trimming a hat, he suddenly addressed her with: I hope Mr. Bingley will like it, Lizzy.",
+      modernizedText: "It was revealed like this: Seeing his second daughter working on a hat, he suddenly said to her, 'I hope Mr. Bingley will like it, Lizzy.'",
+      charCount: 166,
+      tokenCount: 40,
+      wordCount: 31,
+      estimatedCost: 0.0017,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 28,
+      originalText: "We are not in a way to know what Mr. Bingley likes, said her mother resentfully, since we are not to visit. But you forget, mamma, said Elizabeth, that we shall meet him at the assemblies.",
+      modernizedText: "We have no way of knowing what Mr. Bingley likes, her mother said resentfully, since we're not going to visit. But you're forgetting, Mama, Elizabeth said, that we'll meet him at the dances.",
+      charCount: 192,
+      tokenCount: 46,
+      wordCount: 36,
+      estimatedCost: 0.0020,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    {
+      id: 29,
+      originalText: "And Mrs. Long has promised to introduce him. I do not believe Mrs. Long will do any such thing. She has two nieces of her own. She is a selfish, hypocritical woman, and I have no opinion of her.",
+      modernizedText: "And Mrs. Long promised to introduce him. I don't believe Mrs. Long will do any such thing. She has two nieces of her own. She's a selfish, hypocritical woman, and I don't think much of her.",
+      charCount: 197,
+      tokenCount: 47,
+      wordCount: 37,
+      estimatedCost: 0.0021,
+      edited: false,
+      flagged: false,
+      status: "completed",
+    },
+    
+    // PROCESSING CHUNKS (30-32) - Currently being modernized
+    {
+      id: 30,
+      originalText: "No more have I, said Mr. Bennet; and I am glad to find that you do not depend on her serving you. Mrs. Bennet deigned not to make any reply.",
+      modernizedText: "",
+      charCount: 145,
+      tokenCount: 35,
+      wordCount: 27,
+      estimatedCost: 0.0015,
+      edited: false,
+      flagged: false,
+      status: "processing",
+    },
+    {
+      id: 31,
+      originalText: "But on the following morning she could not conceal her suspicions from the family. Elizabeth, I hope you have ordered a good dinner today, because I have reason to expect an addition to our family party.",
+      modernizedText: "",
+      charCount: 213,
+      tokenCount: 51,
+      wordCount: 40,
+      estimatedCost: 0.0022,
+      edited: false,
+      flagged: false,
+      status: "processing",
+    },
+    {
+      id: 32,
+      originalText: "Who do you mean, my dear? I know of nobody that is coming, I am sure, unless Charlotte Lucas should happen to call in—and I hope my dinners are good enough for her.",
+      modernizedText: "",
+      charCount: 171,
+      tokenCount: 41,
+      wordCount: 32,
+      estimatedCost: 0.0018,
+      edited: false,
+      flagged: false,
+      status: "processing",
+    },
+    
+    // FAILED CHUNKS (33-35) - Modernization failed
+    {
+      id: 33,
+      originalText: "The person of whom I speak is a gentleman, and a stranger. Mrs. Bennet's eyes sparkled. A gentleman and a stranger! It is Mr. Bingley, I am sure! Well, I am sure I shall be extremely glad to see Mr. Bingley.",
+      modernizedText: "",
+      charCount: 210,
+      tokenCount: 50,
+      wordCount: 39,
+      estimatedCost: 0.0022,
+      edited: false,
+      flagged: true,
+      status: "failed",
+    },
+    {
+      id: 34,
+      originalText: "But—good Lord! how unlucky! There is not a bit of fish to be got today. Lydia, my love, ring the bell—I must speak to Hill this moment.",
+      modernizedText: "",
+      charCount: 141,
+      tokenCount: 34,
+      wordCount: 26,
+      estimatedCost: 0.0015,
+      edited: false,
+      flagged: true,
+      status: "failed",
+    },
+    {
+      id: 35,
+      originalText: "I am glad it is settled. But, Lizzy, you look as if you did not enjoy it. You are not going to be missish, I hope, and pretend to be affronted at an idle report. For what do we live, but to make sport for our neighbours, and laugh at them in our turn?",
+      modernizedText: "",
+      charCount: 255,
+      tokenCount: 61,
+      wordCount: 48,
+      estimatedCost: 0.0027,
+      edited: false,
+      flagged: true,
+      status: "failed",
+    },
+    
+    // PENDING CHUNKS (36-49) - Waiting to be modernized
+    {
+      id: 36,
+      originalText: "Oh! you are a great deal too apt, you know, to like people in general. You never see a fault in anybody. All the world are good and agreeable in your eyes. I never heard you speak ill of a human being in your life.",
+      modernizedText: "",
+      charCount: 218,
+      tokenCount: 52,
+      wordCount: 41,
+      estimatedCost: 0.0023,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 37,
+      originalText: "I would not wish to be hasty in censuring anyone; but I always speak what I think. I know you do; and it is that which makes the wonder. With your good sense, to be so honestly blind to the follies and nonsense of others!",
+      modernizedText: "",
+      charCount: 227,
+      tokenCount: 54,
+      wordCount: 43,
+      estimatedCost: 0.0024,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 38,
+      originalText: "Affectation of candour is common enough—one meets with it everywhere. But to be candid without ostentation or design—to take the good of everybody's character and make it still better, and say nothing of the bad—belongs to you alone.",
+      modernizedText: "",
+      charCount: 241,
+      tokenCount: 58,
+      wordCount: 45,
+      estimatedCost: 0.0025,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 39,
+      originalText: "And the world in general would be improved if more people possessed your disposition. But with me, you know, it is quite different. I always judge by appearances.",
+      modernizedText: "",
+      charCount: 163,
+      tokenCount: 39,
+      wordCount: 31,
+      estimatedCost: 0.0017,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 40,
+      originalText: "Mr. Darcy soon drew the attention of the room by his fine, tall person, handsome features, noble mien, and the report which was in general circulation within five minutes after his entrance, of his having ten thousand a year.",
+      modernizedText: "",
+      charCount: 228,
+      tokenCount: 55,
+      wordCount: 43,
+      estimatedCost: 0.0024,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 41,
+      originalText: "The gentlemen pronounced him to be a fine figure of a man, the ladies declared he was much handsomer than Mr. Bingley, and he was looked at with great admiration for about half the evening.",
+      modernizedText: "",
+      charCount: 193,
+      tokenCount: 46,
+      wordCount: 36,
+      estimatedCost: 0.0020,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 42,
+      originalText: "Till his manners gave a disgust which turned the tide of his popularity; for he was discovered to be proud; to be above his company, and above being pleased.",
+      modernizedText: "",
+      charCount: 157,
+      tokenCount: 38,
+      wordCount: 29,
+      estimatedCost: 0.0016,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 43,
+      originalText: "And not all his large estate in Derbyshire could then save him from having a most forbidding, disagreeable countenance, and being unworthy to be compared with his friend.",
+      modernizedText: "",
+      charCount: 172,
+      tokenCount: 41,
+      wordCount: 32,
+      estimatedCost: 0.0018,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 44,
+      originalText: "Mr. Bingley had soon made himself acquainted with all the principal people in the room; he was lively and unreserved, danced every dance, was angry that the ball closed so early.",
+      modernizedText: "",
+      charCount: 181,
+      tokenCount: 43,
+      wordCount: 34,
+      estimatedCost: 0.0019,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 45,
+      originalText: "And talked of giving one himself at Netherfield. Such amiable qualities must speak for themselves. What a contrast between him and his friend! Mr. Darcy danced only once with Mrs. Hurst and once with Miss Bingley.",
+      modernizedText: "",
+      charCount: 218,
+      tokenCount: 52,
+      wordCount: 41,
+      estimatedCost: 0.0023,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 46,
+      originalText: "Declined being introduced to any other lady, and spent the rest of the evening in walking about the room, speaking occasionally to one of his own party. His character was decided. He was the proudest, most disagreeable man in the world.",
+      modernizedText: "",
+      charCount: 238,
+      tokenCount: 57,
+      wordCount: 45,
+      estimatedCost: 0.0025,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 47,
+      originalText: "And everybody hoped that he would never come there again. Amongst the most violent against him was Mrs. Bennet, whose dislike of his general behaviour was sharpened into particular resentment by his having slighted one of her daughters.",
+      modernizedText: "",
+      charCount: 242,
+      tokenCount: 58,
+      wordCount: 45,
+      estimatedCost: 0.0025,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 48,
+      originalText: "Elizabeth Bennet had been obliged, by the scarcity of gentlemen, to sit down for two dances; and during part of that time, Mr. Darcy had been standing near enough for her to hear a conversation between him and Mr. Bingley.",
+      modernizedText: "",
+      charCount: 228,
+      tokenCount: 55,
+      wordCount: 43,
+      estimatedCost: 0.0024,
+      edited: false,
+      flagged: false,
+      status: "pending",
+    },
+    {
+      id: 49,
+      originalText: "Who came from the dance for a few minutes, to press his friend to join it. Come, Darcy, said he, I must have you dance. I hate to see you standing about by yourself in this stupid manner. You had much better dance.",
+      modernizedText: "",
+      charCount: 215,
+      tokenCount: 51,
+      wordCount: 40,
+      estimatedCost: 0.0022,
+      edited: false,
+      flagged: false,
+      status: "pending",
     },
   ]);
 
@@ -356,64 +927,37 @@ export default function App() {
     setCurrentView("project-setup");
   };
 
-  // Function to chunk text into manageable pieces
-  const chunkText = (text: string, maxChunkSize: number = 500): Chunk[] => {
-    // Split by sentences (simple approach - splits on . ! ?)
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  // Function to chunk text by paragraphs (natural boundaries)
+  const chunkText = (text: string): Chunk[] => {
+    // Split by paragraphs (double newline or more)
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
     const chunks: Chunk[] = [];
-    let currentChunk = "";
-    let chunkId = 0;
 
-    for (const sentence of sentences) {
-      const trimmedSentence = sentence.trim();
-      
-      // If adding this sentence would exceed max size, save current chunk
-      if (currentChunk.length + trimmedSentence.length > maxChunkSize && currentChunk.length > 0) {
-        const wordCount = currentChunk.split(/\s+/).length;
-        const charCount = currentChunk.length;
-        const tokenCount = Math.round(wordCount * 1.3);
-        const gptCost = (tokenCount / 1000) * 0.09;
-        const ttsCost = (charCount / 1000000) * 15;
-        
-        chunks.push({
-          id: chunkId++,
-          originalText: currentChunk.trim(),
-          modernizedText: "",
-          charCount,
-          tokenCount,
-          wordCount,
-          estimatedCost: gptCost + ttsCost,
-          edited: false,
-          flagged: false,
-          status: "pending",
-        });
-        currentChunk = trimmedSentence + " ";
-      } else {
-        currentChunk += trimmedSentence + " ";
-      }
-    }
-
-    // Add the last chunk
-    if (currentChunk.trim().length > 0) {
-      const wordCount = currentChunk.trim().split(/\s+/).length;
-      const charCount = currentChunk.trim().length;
+    paragraphs.forEach((paragraph, index) => {
+      const trimmedParagraph = paragraph.trim();
+      const wordCount = trimmedParagraph.split(/\s+/).length;
+      const charCount = trimmedParagraph.length;
       const tokenCount = Math.round(wordCount * 1.3);
-      const gptCost = (tokenCount / 1000) * 0.09;
+      
+      // Cost calculation: GPT-4 Turbo + TTS
+      const gptInputCost = (tokenCount / 1000) * 0.01;
+      const gptOutputCost = (tokenCount / 1000) * 0.03;
       const ttsCost = (charCount / 1000000) * 15;
+      const totalCost = gptInputCost + gptOutputCost + ttsCost;
       
       chunks.push({
-        id: chunkId++,
-        originalText: currentChunk.trim(),
+        id: index,
+        originalText: trimmedParagraph,
         modernizedText: "",
         charCount,
         tokenCount,
         wordCount,
-        estimatedCost: gptCost + ttsCost,
+        estimatedCost: totalCost,
         edited: false,
         flagged: false,
         status: "pending",
       });
-    }
+    });
 
     return chunks;
   };
@@ -434,8 +978,8 @@ export default function App() {
     const endIndex = Math.floor((text.length * config.endPosition) / 100);
     const selectedText = text.slice(startIndex, endIndex);
 
-    // Chunk the selected text into manageable pieces
-    const newChunks = chunkText(selectedText, 500);
+    // Chunk the selected text by paragraphs (natural boundaries)
+    const newChunks = chunkText(selectedText);
 
     const newBook: Book = {
       id: Date.now().toString(),
@@ -678,7 +1222,7 @@ export default function App() {
             />
           )}
 
-          {currentView === "chunk-review" && selectedBook && (
+          {currentView === "chunk-review" && (
             <ChunkReview
               chunks={chunks}
               onBack={() => setCurrentView("library")}
