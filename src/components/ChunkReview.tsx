@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, Zap, Search, Filter, CheckSquare, Square, ChevronDown, ChevronUp, RotateCcw, Check, ArrowRight, Settings } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { ArrowLeft, Zap, Search, CheckSquare, Square, RotateCcw, ArrowRight, Settings, Sparkles, BookOpen, ChevronDown, ChevronUp, Pause, Play, X } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -36,7 +36,7 @@ export type Chunk = {
   flagged: boolean;
   batchId?: number;
   status: "pending" | "processing" | "completed" | "failed";
-  modernizationInstructions?: string; // Store what instructions were used
+  modernizationInstructions?: string;
 };
 
 export type Batch = {
@@ -97,11 +97,9 @@ const generateMockChunks = (): Chunk[] => {
   return mockTexts.map((text, index) => {
     const wordCount = text.split(/\s+/).length;
     const charCount = text.length;
-    // Rough token estimate: ~1.3 tokens per word
     const tokenCount = Math.round(wordCount * 1.3);
     const estimatedCost = (tokenCount / 1000) * 0.09 + (charCount / 1000000) * 15;
 
-    // Make some chunks completed to test the UI
     const isCompleted = index >= 25;
     const modernizedText = isCompleted 
       ? text.replace(/shall/g, "will").replace(/whilst/g, "while").replace(/ought to/g, "should")
@@ -133,10 +131,8 @@ export function ChunkReview({
   onModernizeChunks,
   onRegenerateChunk,
 }: ChunkReviewProps) {
-  // ALWAYS use provided chunks from App.tsx - no fallback
   const [chunks, setChunks] = useState<Chunk[]>(providedChunks || []);
   
-  // Sync chunks when prop changes
   useEffect(() => {
     if (providedChunks) {
       setChunks(providedChunks);
@@ -152,13 +148,19 @@ export function ChunkReview({
   );
   const [regenerateInstructions, setRegenerateInstructions] = useState("");
   const [showSegmentConfig, setShowSegmentConfig] = useState(false);
-  const [targetSegmentDuration, setTargetSegmentDuration] = useState(60); // Duration in seconds
+  const [targetSegmentDuration, setTargetSegmentDuration] = useState(60);
+
+  // Modernization process control
+  const [isModernizing, setIsModernizing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentProcessingIndex, setCurrentProcessingIndex] = useState(0);
+  const modernizationQueueRef = useRef<number[]>([]);
+  const modernizationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter chunks
   const filteredChunks = useMemo(() => {
     let result = chunks;
 
-    // Apply status filter
     if (filterStatus === "pending") {
       result = result.filter(c => c.status === "pending");
     } else if (filterStatus === "completed") {
@@ -167,7 +169,6 @@ export function ChunkReview({
       result = result.filter(c => c.status === "failed");
     }
 
-    // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(c => 
@@ -179,14 +180,9 @@ export function ChunkReview({
     return result;
   }, [chunks, filterStatus, searchQuery]);
 
-  // Calculate dynamic stats based on selection
+  // Calculate stats
   const stats = useMemo(() => {
     const selectedChunks = chunks.filter(c => selectedChunkIds.has(c.id));
-    const totalWords = selectedChunks.reduce((sum, c) => sum + c.wordCount, 0);
-    const totalChars = selectedChunks.reduce((sum, c) => sum + c.charCount, 0);
-    const totalTokens = selectedChunks.reduce((sum, c) => sum + c.tokenCount, 0);
-    
-    // Only calculate modernization cost for pending chunks
     const pendingSelectedChunks = selectedChunks.filter(c => c.status === "pending");
     const pendingTokens = pendingSelectedChunks.reduce((sum, c) => sum + c.tokenCount, 0);
     const modernizationCost = (pendingTokens / 1000) * 0.09;
@@ -197,9 +193,6 @@ export function ChunkReview({
       totalFailed: chunks.filter(c => c.status === "failed").length,
       selectedCount: selectedChunkIds.size,
       selectedPending: pendingSelectedChunks.length,
-      totalWords,
-      totalChars,
-      totalTokens,
       modernizationCost,
     };
   }, [chunks, selectedChunkIds]);
@@ -227,28 +220,25 @@ export function ChunkReview({
     setSelectedChunkIds(new Set());
   };
 
-  const handleModernize = () => {
-    // Simulate modernization
-    const selectedIds = Array.from(selectedChunkIds);
-    const pendingIds = selectedIds.filter(id => {
-      const chunk = chunks.find(c => c.id === id);
-      return chunk && chunk.status === "pending";
-    });
+  // Process one chunk at a time
+  const processNextChunk = () => {
+    if (modernizationQueueRef.current.length === 0) {
+      setIsModernizing(false);
+      setCurrentProcessingIndex(0);
+      return;
+    }
 
-    if (pendingIds.length === 0) return;
-
-    // Update chunks to processing
+    const chunkId = modernizationQueueRef.current[0];
+    
     setChunks(prev => prev.map(chunk => 
-      pendingIds.includes(chunk.id)
+      chunk.id === chunkId
         ? { ...chunk, status: "processing" as const }
         : chunk
     ));
 
-    // Simulate API call
-    setTimeout(() => {
+    modernizationTimerRef.current = setTimeout(() => {
       setChunks(prev => prev.map(chunk => {
-        if (pendingIds.includes(chunk.id)) {
-          // Simple modernization simulation
+        if (chunk.id === chunkId) {
           const modernized = chunk.originalText
             .replace(/shall/g, "will")
             .replace(/whilst/g, "while")
@@ -265,20 +255,73 @@ export function ChunkReview({
         }
         return chunk;
       }));
+
+      modernizationQueueRef.current.shift();
+      setCurrentProcessingIndex(prev => prev + 1);
+      
+      if (!isPaused) {
+        processNextChunk();
+      }
     }, 2000);
+  };
+
+  const handleModernize = () => {
+    const selectedIds = Array.from(selectedChunkIds);
+    const pendingIds = selectedIds.filter(id => {
+      const chunk = chunks.find(c => c.id === id);
+      return chunk && chunk.status === "pending";
+    });
+
+    if (pendingIds.length === 0) return;
+
+    modernizationQueueRef.current = pendingIds;
+    setIsModernizing(true);
+    setIsPaused(false);
+    setCurrentProcessingIndex(0);
+    processNextChunk();
+  };
+
+  const handlePauseResume = () => {
+    if (isPaused) {
+      // Resume
+      setIsPaused(false);
+      processNextChunk();
+    } else {
+      // Pause
+      setIsPaused(true);
+      if (modernizationTimerRef.current) {
+        clearTimeout(modernizationTimerRef.current);
+      }
+    }
+  };
+
+  const handleStop = () => {
+    setIsModernizing(false);
+    setIsPaused(false);
+    setCurrentProcessingIndex(0);
+    modernizationQueueRef.current = [];
+    
+    if (modernizationTimerRef.current) {
+      clearTimeout(modernizationTimerRef.current);
+    }
+
+    // Reset any processing chunks back to pending
+    setChunks(prev => prev.map(chunk => 
+      chunk.status === "processing"
+        ? { ...chunk, status: "pending" as const }
+        : chunk
+    ));
   };
 
   const handleRegenerateChunk = (chunkId: number) => {
     const instructions = regenerateInstructions || modernizationInstructions;
     
-    // Update chunk to processing
     setChunks(prev => prev.map(chunk =>
       chunk.id === chunkId
         ? { ...chunk, status: "processing" as const }
         : chunk
     ));
 
-    // Simulate regeneration
     setTimeout(() => {
       setChunks(prev => prev.map(chunk => {
         if (chunk.id === chunkId) {
@@ -314,19 +357,11 @@ export function ChunkReview({
       };
     }
 
-    // Calculate average chunk duration
-    // Assumption: ~150 words per minute reading speed
     const totalWords = completedChunks.reduce((sum, c) => sum + c.wordCount, 0);
     const avgWordsPerChunk = totalWords / completedChunks.length;
-    const avgChunkDuration = (avgWordsPerChunk / 150) * 60; // in seconds
-    
-    // Calculate how many chunks fit in target duration
+    const avgChunkDuration = (avgWordsPerChunk / 150) * 60;
     const chunksPerSegment = Math.max(1, Math.round(targetSegmentDuration / avgChunkDuration));
-    
-    // Calculate total segments needed
     const totalSegments = Math.ceil(completedChunks.length / chunksPerSegment);
-    
-    // Calculate actual total duration
     const totalDuration = (totalWords / 150) * 60;
     
     return {
@@ -348,8 +383,13 @@ export function ChunkReview({
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.round(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
     if (mins > 0) return `${mins}m ${secs}s`;
     return `${secs}s`;
   };
@@ -488,424 +528,333 @@ export function ChunkReview({
         </DialogContent>
       </Dialog>
 
-      {/* Ambient background blur elements */}
+      {/* Ambient background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 h-full flex flex-col">
-        {/* Top Header */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
+        {/* UNIFIED TOOLBAR - Everything in ONE compact row */}
+        <div className="flex-none bg-white/80 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-2.5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: Back + Title */}
+            <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-black/5 rounded-lg transition-colors"
+                className="flex-shrink-0 p-2 hover:bg-black/5 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
               </button>
-              <div>
-                <h3 className="text-lg sm:text-xl">Chunk Workspace</h3>
-                <p className="text-xs sm:text-sm text-neutral-600">
-                  {chunks.length} total chunks • Modernize chunks, then create audio segments
-                </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-purple-600 flex-shrink-0" strokeWidth={2.5} />
+                  <h3 className="text-base sm:text-lg truncate">Text Transformation</h3>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {stats.selectedPending > 0 && (
-                <button
-                  onClick={handleModernize}
-                  className="group relative px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl flex items-center gap-3 transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/25 hover:scale-105"
+            {/* Center: Search + Filter + Stats */}
+            <div className="flex items-center gap-2 flex-1 max-w-2xl">
+              {/* Search */}
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" strokeWidth={2.5} />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+              
+              {/* Filter */}
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="completed">Done</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Separator orientation="vertical" className="h-6" />
+
+              {/* Compact Stats */}
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-neutral-600 tabular-nums">{stats.totalCompleted}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="text-neutral-600 tabular-nums">{stats.totalPending}</span>
+                </div>
+                {stats.selectedCount > 0 && (
+                  <>
+                    <Separator orientation="vertical" className="h-3" />
+                    <div className="flex items-center gap-1">
+                      <CheckSquare className="w-3 h-3 text-purple-600" strokeWidth={2.5} />
+                      <span className="text-purple-700 tabular-nums">{stats.selectedCount}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Select All/Clear */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="h-7 px-2 text-xs"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-                  <Zap className="w-4 h-4 relative z-10" strokeWidth={2.5} />
-                  <span className="relative z-10">Modernize {stats.selectedPending}</span>
-                </button>
+                  All
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectNone}
+                  className="h-7 px-2 text-xs"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            {/* Right: Modernization Controls + Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Modernization Progress/Controls */}
+              {isModernizing && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                    <span className="text-xs text-blue-700 tabular-nums">
+                      {currentProcessingIndex}/{modernizationQueueRef.current.length + currentProcessingIndex}
+                    </span>
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-4" />
+                  
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handlePauseResume}
+                      className="p-1 hover:bg-blue-100 rounded transition-colors"
+                      title={isPaused ? "Resume" : "Pause"}
+                    >
+                      {isPaused ? (
+                        <Play className="w-3.5 h-3.5 text-blue-700" strokeWidth={2.5} />
+                      ) : (
+                        <Pause className="w-3.5 h-3.5 text-blue-700" strokeWidth={2.5} />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleStop}
+                      className="p-1 hover:bg-red-100 rounded transition-colors"
+                      title="Stop"
+                    >
+                      <X className="w-3.5 h-3.5 text-red-600" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Modernize Button */}
+              {!isModernizing && stats.selectedPending > 0 && (
+                <Button
+                  onClick={handleModernize}
+                  size="sm"
+                  className="h-8 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  <span className="text-xs">Modernize {stats.selectedPending}</span>
+                </Button>
               )}
               
+              {/* Create Audio Button */}
               {canProceedToSegments && (
-                <button
+                <Button
                   onClick={handleProceedClick}
-                  className="px-6 sm:px-8 py-3 bg-emerald-600 text-white rounded-xl flex items-center gap-3 transition-all duration-200 hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-105"
+                  size="sm"
+                  className="h-8 px-4 bg-emerald-600 text-white gap-1.5"
                 >
-                  <span>Create Segments</span>
-                  <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
-                </button>
+                  <span className="text-xs">Create Audio</span>
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+                </Button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Dynamic Stats Bar */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-            <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-neutral-600 mb-1">Total Chunks</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{chunks.length}</p>
-            </div>
-            
-            <div className="bg-amber-50 rounded-xl border border-amber-200 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-amber-700 mb-1">Pending</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-amber-900">{stats.totalPending}</p>
-            </div>
+        {/* Main Content - Side by Side Text */}
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-4 max-w-7xl mx-auto">
+            {filteredChunks.map((chunk) => {
+              const isSelected = selectedChunkIds.has(chunk.id);
+              const isExpanded = expandedChunkId === chunk.id;
+              const isCompleted = chunk.status === "completed";
+              
+              return (
+                <div 
+                  key={chunk.id}
+                  className={`group relative bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+                    isSelected
+                      ? "border-purple-300 shadow-lg shadow-purple-500/10"
+                      : "border-black/5 hover:border-purple-200 hover:shadow-md"
+                  }`}
+                >
+                  {/* Selection indicator */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${
+                    isSelected ? "bg-gradient-to-b from-purple-600 to-pink-600" : "bg-transparent"
+                  }`} />
 
-            <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-emerald-700 mb-1">Completed</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-emerald-900">{stats.totalCompleted}</p>
-            </div>
-            
-            <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-neutral-600 mb-1">Selected</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-purple-700">{stats.selectedCount}</p>
-            </div>
-
-            {stats.selectedPending > 0 && (
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-3 sm:p-4 shadow-sm">
-                <p className="text-xs text-purple-700 mb-1">Est. Cost</p>
-                <p className="text-base sm:text-lg tabular-nums text-purple-900">
-                  ${stats.modernizationCost.toFixed(3)}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Two-Panel Layout */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel: Chunk List */}
-          <div className="flex-1 flex flex-col bg-white border-r border-black/5">
-            {/* Search and Filter */}
-            <div className="flex-none p-4 space-y-3 border-b border-black/5 bg-white/70 backdrop-blur-xl">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" strokeWidth={2.5} />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search chunks..."
-                    className="pl-9"
-                  />
-                </div>
-                
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Chunks</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-neutral-600">
-                  Showing {filteredChunks.length} chunks • {stats.selectedCount} selected
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAll}
-                    className="h-7 text-xs"
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectNone}
-                    className="h-7 text-xs"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Chunk List */}
-            <ScrollArea className="flex-1">
-              <div className="bg-white/70 backdrop-blur-xl">
-                {filteredChunks.map((chunk) => {
-                  const isSelected = selectedChunkIds.has(chunk.id);
-                  const isExpanded = expandedChunkId === chunk.id;
-                  
-                  return (
-                    <div key={chunk.id}>
-                      <div
+                  {/* Main Content */}
+                  <div className="pl-6 pr-4 py-5">
+                    <div className="flex items-start gap-4">
+                      {/* Checkbox */}
+                      <button
                         onClick={() => handleChunkSelect(chunk.id)}
-                        className={`group border-b border-black/5 px-4 py-3 cursor-pointer transition-all ${
-                          isSelected
-                            ? "bg-purple-50 border-l-4 border-l-purple-600"
-                            : "hover:bg-neutral-50 border-l-4 border-l-transparent"
-                        }`}
+                        className="flex-shrink-0 mt-1 p-1 hover:bg-purple-50 rounded transition-colors"
                       >
-                        <div className="flex items-start gap-3">
-                          {/* Selection checkbox */}
-                          <div className="flex-shrink-0 mt-1">
-                            {isSelected ? (
-                              <CheckSquare className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
-                            ) : (
-                              <Square className="w-5 h-5 text-neutral-400 group-hover:text-purple-400" strokeWidth={2.5} />
-                            )}
-                          </div>
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+                        ) : (
+                          <Square className="w-5 h-5 text-neutral-300 group-hover:text-purple-400" strokeWidth={2.5} />
+                        )}
+                      </button>
 
-                          {/* Chunk content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-xs text-neutral-500">Chunk #{chunk.id}</p>
-                              <Badge 
-                                variant={chunk.status === "completed" ? "default" : chunk.status === "failed" ? "destructive" : "secondary"}
-                                className={`text-xs ${chunk.status === "completed" ? "bg-emerald-600" : ""}`}
-                              >
-                                {chunk.status === "processing" ? "Processing..." : chunk.status}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {chunk.wordCount} words
-                              </Badge>
+                      {/* Text Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-2 mb-3">
+                          {chunk.status === "completed" && (
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+                              <Sparkles className="w-3 h-3" strokeWidth={2.5} />
+                              <span className="text-xs">Modernized</span>
                             </div>
+                          )}
+                          {chunk.status === "pending" && (
+                            <div className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">
+                              Pending
+                            </div>
+                          )}
+                          {chunk.status === "processing" && (
+                            <div className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs animate-pulse">
+                              Processing...
+                            </div>
+                          )}
+                          {chunk.status === "failed" && (
+                            <div className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
+                              Failed
+                            </div>
+                          )}
+                        </div>
 
-                            {/* Original Text */}
-                            <p className="text-sm text-neutral-900 line-clamp-2 mb-2">
+                        {/* Side by Side Text */}
+                        <div className={`grid gap-6 ${isCompleted ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          {/* Original Text */}
+                          <div>
+                            {isCompleted && (
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1 h-4 bg-neutral-300 rounded-full" />
+                                <span className="text-xs text-neutral-500 uppercase tracking-wide">Original</span>
+                              </div>
+                            )}
+                            <p className="text-base leading-relaxed text-neutral-700">
                               {chunk.originalText}
                             </p>
+                          </div>
 
-                            {/* Modernized Text (if available) */}
-                            {chunk.status === "completed" && chunk.modernizedText && (
-                              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-200">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Check className="w-3 h-3 text-emerald-600" strokeWidth={2.5} />
-                                  <span className="text-xs text-purple-700">Modernized</span>
-                                </div>
-                                <p className="text-sm text-purple-900 line-clamp-2">
+                          {/* Modernized Text */}
+                          {isCompleted && chunk.modernizedText && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1 h-4 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
+                                <span className="text-xs text-purple-700 uppercase tracking-wide">TTS-Ready</span>
+                              </div>
+                              <div className="bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-lg p-3 border border-purple-200/50">
+                                <p className="text-base leading-relaxed text-purple-900">
                                   {chunk.modernizedText}
                                 </p>
                               </div>
-                            )}
-
-                            <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
-                              <span>{chunk.charCount} chars</span>
-                              <span>•</span>
-                              <span>{chunk.tokenCount} tokens</span>
                             </div>
-                          </div>
-
-                          {/* Expand button */}
-                          {chunk.status === "completed" && (
-                            <button
-                              onClick={(e) => handleToggleExpand(chunk.id, e)}
-                              className="flex-shrink-0 p-2 hover:bg-black/5 rounded-lg transition-colors"
-                            >
-                              {isExpanded ? (
-                                <ChevronUp className="w-4 h-4" strokeWidth={2.5} />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
-                              )}
-                            </button>
                           )}
                         </div>
-                      </div>
 
-                      {/* Expanded Detail View */}
-                      {isExpanded && chunk.status === "completed" && (
-                        <div className="border-b border-black/5 bg-gradient-to-br from-purple-50/50 to-pink-50/50 p-6">
-                          <div className="max-w-4xl">
-                            <h4 className="text-sm mb-4">Chunk #{chunk.id} Details</h4>
+                        {/* Expand for Tools */}
+                        {isCompleted && (
+                          <div className="mt-4">
+                            <button
+                              onClick={(e) => handleToggleExpand(chunk.id, e)}
+                              className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 transition-colors"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-4 h-4" strokeWidth={2.5} />
+                                  <span>Hide Tools</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
+                                  <span>Edit & Regenerate</span>
+                                </>
+                              )}
+                            </button>
 
-                            <div className="grid grid-cols-2 gap-4 mb-6">
-                              {/* Original */}
-                              <div>
-                                <Label className="text-xs text-neutral-600 mb-2 block">Original Text</Label>
-                                <div className="bg-white rounded-lg border border-neutral-200 p-4">
-                                  <p className="text-sm text-neutral-900 whitespace-pre-wrap">
-                                    {chunk.originalText}
+                            {isExpanded && (
+                              <div className="mt-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200 space-y-3">
+                                <div>
+                                  <Label className="text-xs text-neutral-600 mb-2 block">
+                                    Custom regeneration instructions (optional)
+                                  </Label>
+                                  <Textarea
+                                    value={regenerateInstructions}
+                                    onChange={(e) => setRegenerateInstructions(e.target.value)}
+                                    placeholder={modernizationInstructions}
+                                    className="min-h-[60px] text-sm resize-none"
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-neutral-500">
+                                    Leave empty to use default instructions
                                   </p>
+                                  <Button
+                                    onClick={() => handleRegenerateChunk(chunk.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-2"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    Regenerate
+                                  </Button>
                                 </div>
                               </div>
-
-                              {/* Modernized */}
-                              <div>
-                                <Label className="text-xs text-purple-700 mb-2 block">Modernized Text</Label>
-                                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4">
-                                  <p className="text-sm text-purple-900 whitespace-pre-wrap">
-                                    {chunk.modernizedText}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <Separator className="my-4" />
-
-                            {/* Instructions Used */}
-                            <div className="mb-4">
-                              <Label className="text-xs text-neutral-600 mb-2 block">Instructions Used</Label>
-                              <div className="bg-white rounded-lg border border-neutral-200 p-3">
-                                <p className="text-sm text-neutral-700">
-                                  {chunk.modernizationInstructions || "Default modernization instructions"}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Regenerate Section */}
-                            <div>
-                              <Label className="text-xs text-neutral-600 mb-2 block">Regenerate with New Instructions</Label>
-                              <div className="flex gap-2">
-                                <Textarea
-                                  value={regenerateInstructions}
-                                  onChange={(e) => setRegenerateInstructions(e.target.value)}
-                                  placeholder="Enter new instructions or leave empty to use current settings..."
-                                  className="flex-1 min-h-[80px] text-sm"
-                                />
-                                <Button
-                                  onClick={() => handleRegenerateChunk(chunk.id)}
-                                  variant="outline"
-                                  className="gap-2"
-                                  disabled={chunk.status === "processing"}
-                                >
-                                  <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-                                  Regenerate
-                                </Button>
-                              </div>
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {filteredChunks.length === 0 && (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <Filter className="w-12 h-12 text-neutral-300 mx-auto mb-3" strokeWidth={1.5} />
-                      <p className="text-neutral-500">
-                        {chunks.length === 0 
-                          ? "No chunks available" 
-                          : "No chunks match your filters"}
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        {chunks.length === 0 
-                          ? "Upload a book to get started"
-                          : "Try adjusting your search or filter"}
-                      </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </div>
+              );
+            })}
           </div>
+        </ScrollArea>
 
-          {/* Right Panel: Configuration */}
-          <div className="w-96 bg-white/70 backdrop-blur-xl border-l border-black/5 flex flex-col">
-            <div className="flex-none px-6 py-4 border-b border-black/5">
-              <h4 className="text-sm">Modernization Settings</h4>
-              <p className="text-xs text-neutral-600 mt-1">
-                Configure how chunks will be modernized
-              </p>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-6">
-                {/* Instructions */}
-                <div>
-                  <Label className="text-sm mb-2 block">Instructions</Label>
-                  <Textarea
-                    value={modernizationInstructions}
-                    onChange={(e) => setModernizationInstructions(e.target.value)}
-                    placeholder="Describe how you want the text modernized..."
-                    className="min-h-[150px] text-sm"
-                  />
-                  <p className="text-xs text-neutral-500 mt-2">
-                    These instructions will be used for newly selected chunks.
-                  </p>
-                </div>
-
-                {/* Quick presets */}
-                <div>
-                  <Label className="text-sm mb-2 block">Quick Presets</Label>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left text-xs"
-                      onClick={() => setModernizationInstructions("Modern, casual, conversational tone. Update archaic language while preserving the original meaning and literary style.")}
-                    >
-                      Casual & Conversational
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left text-xs"
-                      onClick={() => setModernizationInstructions("Preserve the formal literary style but make the language accessible to modern readers. Update only the most archaic terms.")}
-                    >
-                      Literary & Accessible
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left text-xs"
-                      onClick={() => setModernizationInstructions("Simplify complex sentences. Use contemporary language. Make it easy to understand for all readers.")}
-                    >
-                      Simple & Clear
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Workflow Guide */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
-                  <h5 className="text-sm mb-2 text-blue-900">Workflow</h5>
-                  <ol className="text-xs text-blue-800 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-xs">1</span>
-                      <span>Select pending chunks to modernize</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-xs">2</span>
-                      <span>Click "Modernize" to process them</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-xs">3</span>
-                      <span>Review before/after text inline</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-xs">4</span>
-                      <span>Proceed to create audio segments</span>
-                    </li>
-                  </ol>
-                </div>
-
-                {/* Progress Summary */}
-                <div className="bg-white rounded-lg border border-neutral-200 p-4">
-                  <h5 className="text-sm mb-3">Progress</h5>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-600">Total Chunks</span>
-                      <span className="tabular-nums">{chunks.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-600">Modernized</span>
-                      <span className="tabular-nums text-emerald-700">{stats.totalCompleted}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-600">Remaining</span>
-                      <span className="tabular-nums text-amber-700">{stats.totalPending}</span>
-                    </div>
-                    <div className="w-full bg-neutral-200 rounded-full h-2 mt-3">
-                      <div 
-                        className="bg-gradient-to-r from-emerald-600 to-green-600 h-2 rounded-full transition-all"
-                        style={{ width: `${(stats.totalCompleted / chunks.length) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
+        {/* Bottom Settings Bar - Modernization Instructions */}
+        <div className="flex-none bg-white/90 backdrop-blur-xl border-t border-black/5 px-6 py-3">
+          <div className="flex items-center gap-3">
+            <Label className="text-xs text-neutral-600 whitespace-nowrap flex-shrink-0">
+              Default Instructions:
+            </Label>
+            <Textarea
+              value={modernizationInstructions}
+              onChange={(e) => setModernizationInstructions(e.target.value)}
+              placeholder="Describe how you want text modernized..."
+              className="flex-1 min-h-[50px] text-sm resize-none"
+            />
           </div>
         </div>
       </div>
