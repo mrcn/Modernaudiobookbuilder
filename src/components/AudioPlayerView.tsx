@@ -9,16 +9,17 @@ import {
   Volume2, 
   Download, 
   Scissors,
-  Settings,
   RotateCcw,
   Edit,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from "lucide-react";
 import { Slider } from "./ui/slider";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Separator } from "./ui/separator";
 
 type AudioSegment = {
   id: string;
@@ -175,115 +176,6 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
           </div>
         </div>
 
-        {/* Sticky Media Player */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6 shadow-sm">
-          <div className="max-w-6xl mx-auto">
-            {/* Segment info and controls */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                  <span className="text-purple-700">{currentSegmentIndex + 1}</span>
-                </div>
-                <div>
-                  <p className="text-sm">Chunk #{currentSegment.chunkId}</p>
-                  <p className="text-xs text-neutral-600">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {playbackSpeed}x
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-                    const currentIndex = speeds.indexOf(playbackSpeed);
-                    const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-                    setPlaybackSpeed(nextSpeed);
-                  }}
-                >
-                  Speed
-                </Button>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <Slider
-              value={[currentTime]}
-              max={duration}
-              step={0.1}
-              onValueChange={handleSeek}
-              className="mb-4"
-            />
-
-            {/* Playback controls */}
-            <div className="flex items-center justify-center gap-2 sm:gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePreviousSegment}
-                disabled={currentSegmentIndex === 0}
-              >
-                <SkipBack className="w-5 h-5" strokeWidth={2.5} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={skipBackward}
-              >
-                <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-                <span className="text-xs ml-1">15s</span>
-              </Button>
-
-              <button
-                onClick={togglePlayPause}
-                className="relative group w-14 h-14 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/25"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-                {isPlaying ? (
-                  <Pause className="w-5 h-5 text-white relative z-10" fill="white" strokeWidth={2.5} />
-                ) : (
-                  <Play className="w-5 h-5 text-white ml-0.5 relative z-10" fill="white" strokeWidth={2.5} />
-                )}
-              </button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={skipForward}
-              >
-                <span className="text-xs mr-1">15s</span>
-                <RotateCcw className="w-4 h-4 rotate-180" strokeWidth={2.5} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNextSegment}
-                disabled={currentSegmentIndex === mockSegments.length - 1}
-              >
-                <SkipForward className="w-5 h-5" strokeWidth={2.5} />
-              </Button>
-
-              <div className="flex items-center gap-2 ml-4">
-                <Volume2 className="w-4 h-4 text-neutral-600" strokeWidth={2.5} />
-                <Slider
-                  value={[volume * 100]}
-                  max={100}
-                  step={1}
-                  onValueChange={(value) => setVolume(value[0] / 100)}
-                  className="w-24"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Three-Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel: Chunk Navigation */}
@@ -427,17 +319,120 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
             </div>
           </div>
 
-          {/* Right Panel: Settings & Info (optional, can be toggled) */}
+          {/* Right Panel: Player Controls & Settings */}
           <div className="w-80 bg-white/70 backdrop-blur-xl border-l border-black/5 flex flex-col">
             <div className="flex-none px-6 py-4 border-b border-black/5">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-purple-600" strokeWidth={2.5} />
-                <h4 className="text-sm">Playback Settings</h4>
+                <h4 className="text-sm">Playback</h4>
               </div>
             </div>
 
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
+                {/* Current Segment Info */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                      <span className="text-purple-700">{currentSegmentIndex + 1}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm">Chunk #{currentSegment.chunkId}</p>
+                      <p className="text-xs text-neutral-600">
+                        {formatTime(currentTime)} / {formatTime(duration)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <Slider
+                    value={[currentTime]}
+                    max={duration}
+                    step={0.1}
+                    onValueChange={handleSeek}
+                    className="mb-4"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Playback Controls */}
+                <div>
+                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Controls</h5>
+                  
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handlePreviousSegment}
+                      disabled={currentSegmentIndex === 0}
+                    >
+                      <SkipBack className="w-4 h-4" strokeWidth={2.5} />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={skipBackward}
+                    >
+                      <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
+                    </Button>
+
+                    <button
+                      onClick={togglePlayPause}
+                      className="relative group w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-5 h-5 text-white" fill="white" strokeWidth={2.5} />
+                      ) : (
+                        <Play className="w-5 h-5 text-white ml-0.5" fill="white" strokeWidth={2.5} />
+                      )}
+                    </button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={skipForward}
+                    >
+                      <RotateCcw className="w-4 h-4 rotate-180" strokeWidth={2.5} />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleNextSegment}
+                      disabled={currentSegmentIndex === mockSegments.length - 1}
+                    >
+                      <SkipForward className="w-4 h-4" strokeWidth={2.5} />
+                    </Button>
+                  </div>
+
+                  <div className="text-center text-xs text-neutral-500 mb-2">
+                    Skip 15s backward/forward
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Volume Control */}
+                <div>
+                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Volume</h5>
+                  <div className="flex items-center gap-3">
+                    <Volume2 className="w-4 h-4 text-neutral-600 flex-shrink-0" strokeWidth={2.5} />
+                    <Slider
+                      value={[volume * 100]}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) => setVolume(value[0] / 100)}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-neutral-600 w-12 text-right">{Math.round(volume * 100)}%</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Speed Control */}
                 <div>
                   <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Speed</h5>
                   <div className="grid grid-cols-3 gap-2">
@@ -455,30 +450,36 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                   </div>
                 </div>
 
+                <Separator />
+
+                {/* Segment Stats */}
                 <div>
                   <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Current Segment</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-neutral-600">Chunk</span>
-                      <span>#{currentSegment.chunkId}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-neutral-600">Duration</span>
-                      <span>{formatTime(currentSegment.duration)}</span>
+                      <span className="tabular-nums">{formatTime(currentSegment.duration)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-neutral-600">Words</span>
-                      <span>{currentSegment.text.split(/\s+/).length}</span>
+                      <span className="tabular-nums">{currentSegment.text.split(/\s+/).length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-600">Characters</span>
+                      <span className="tabular-nums">{currentSegment.text.length}</span>
                     </div>
                   </div>
                 </div>
 
+                <Separator />
+
+                {/* Overall Progress */}
                 <div>
                   <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Progress</h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-600">Completed</span>
-                      <span>{currentSegmentIndex}/{mockSegments.length}</span>
+                      <span className="tabular-nums">{currentSegmentIndex}/{mockSegments.length}</span>
                     </div>
                     <div className="w-full bg-neutral-200 rounded-full h-2">
                       <div 
@@ -486,6 +487,9 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                         style={{ width: `${(currentSegmentIndex / mockSegments.length) * 100}%` }}
                       />
                     </div>
+                    <p className="text-xs text-neutral-500">
+                      {Math.round((currentSegmentIndex / mockSegments.length) * 100)}% complete
+                    </p>
                   </div>
                 </div>
               </div>

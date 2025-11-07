@@ -4,7 +4,7 @@ import { LibraryView } from "./components/LibraryView";
 import { UploadScreen } from "./components/UploadScreen";
 import { ProjectSetup, ProjectConfig } from "./components/ProjectSetup";
 import { ChunkReview, Chunk } from "./components/ChunkReview";
-import { BatchBuilder } from "./components/BatchBuilder";
+import { SegmentBuilder } from "./components/SegmentBuilder";
 import { EditorView } from "./components/EditorView";
 import { AudioPlayerView } from "./components/AudioPlayerView";
 import { EditionsView } from "./components/EditionsView";
@@ -24,6 +24,7 @@ export type Book = {
   originalText?: string;
   modernizedText?: string;
   audioSegments?: AudioSegment[];
+  chunks?: Chunk[];
 };
 
 export type AudioSegment = {
@@ -72,11 +73,39 @@ export type Clip = {
   createdAt: Date;
 };
 
-type View = "library" | "upload" | "project-setup" | "chunk-review" | "batch-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
+type View = "library" | "upload" | "project-setup" | "chunk-review" | "segment-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>("library");
   const [uploadedFile, setUploadedFile] = useState<{ file: File; content: string } | null>(null);
+  // Helper to generate sample chunks for demo books
+  const generateSampleChunks = (text: string, count: number = 5): Chunk[] => {
+    const chunks: Chunk[] = [];
+    const sentences = text.split('. ');
+    
+    for (let i = 0; i < Math.min(count, sentences.length); i++) {
+      const chunkText = sentences[i] + (i < sentences.length - 1 ? '.' : '');
+      const wordCount = chunkText.split(/\s+/).length;
+      const charCount = chunkText.length;
+      const tokenCount = Math.round(wordCount * 1.3);
+      
+      chunks.push({
+        id: i,
+        originalText: chunkText,
+        modernizedText: i < 3 ? `[Modernized] ${chunkText}` : "",
+        charCount,
+        tokenCount,
+        wordCount,
+        estimatedCost: (tokenCount / 1000) * 0.09 + (charCount / 1000000) * 15,
+        edited: false,
+        flagged: false,
+        status: i < 3 ? "completed" : "pending",
+      });
+    }
+    
+    return chunks;
+  };
+
   const [books, setBooks] = useState<Book[]>([
     {
       id: "1",
@@ -87,9 +116,9 @@ export default function App() {
       uploadedAt: new Date("2024-11-01"),
       status: "audio-ready",
       originalText:
-        "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+        "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.",
       modernizedText:
-        "Everyone knows that a wealthy single man must be looking for a wife.",
+        "Everyone knows that a wealthy single man must be looking for a wife. No matter how little is known about such a man when he first arrives in a neighborhood, the local families are convinced that he belongs with one of their daughters.",
       audioSegments: [
         {
           id: "seg-1",
@@ -98,6 +127,7 @@ export default function App() {
           duration: 4.2,
         },
       ],
+      chunks: generateSampleChunks("It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.", 3),
     },
     {
       id: "2",
@@ -107,8 +137,9 @@ export default function App() {
       coverGradient: "from-blue-500 via-cyan-500 to-teal-400",
       uploadedAt: new Date("2024-10-28"),
       status: "modernized",
-      originalText: "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse...",
-      modernizedText: "Call me Ishmael. A few years back, when I was broke and feeling restless...",
+      originalText: "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation.",
+      modernizedText: "Call me Ishmael. A few years back, when I was broke and feeling restless, I decided to go to sea for a while. It's my way of dealing with depression and staying sane.",
+      chunks: generateSampleChunks("Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation.", 4),
     },
     {
       id: "3",
@@ -118,6 +149,8 @@ export default function App() {
       coverGradient: "from-amber-400 via-orange-500 to-red-500",
       uploadedAt: new Date("2024-10-15"),
       status: "uploaded",
+      originalText: "To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex.",
+      chunks: generateSampleChunks("To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex.", 3),
     },
     {
       id: "4",
@@ -127,6 +160,8 @@ export default function App() {
       coverGradient: "from-slate-500 via-purple-500 to-indigo-600",
       uploadedAt: new Date("2024-10-10"),
       status: "modernized",
+      originalText: "You will rejoice to hear that no disaster has accompanied the commencement of an enterprise which you have regarded with such evil forebodings. I arrived here yesterday, and my first task is to assure my dear sister of my welfare and increasing confidence in the success of my undertaking.",
+      chunks: generateSampleChunks("You will rejoice to hear that no disaster has accompanied the commencement of an enterprise which you have regarded with such evil forebodings. I arrived here yesterday, and my first task is to assure my dear sister of my welfare and increasing confidence in the success of my undertaking.", 2),
     },
   ]);
   
@@ -321,6 +356,68 @@ export default function App() {
     setCurrentView("project-setup");
   };
 
+  // Function to chunk text into manageable pieces
+  const chunkText = (text: string, maxChunkSize: number = 500): Chunk[] => {
+    // Split by sentences (simple approach - splits on . ! ?)
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const chunks: Chunk[] = [];
+    let currentChunk = "";
+    let chunkId = 0;
+
+    for (const sentence of sentences) {
+      const trimmedSentence = sentence.trim();
+      
+      // If adding this sentence would exceed max size, save current chunk
+      if (currentChunk.length + trimmedSentence.length > maxChunkSize && currentChunk.length > 0) {
+        const wordCount = currentChunk.split(/\s+/).length;
+        const charCount = currentChunk.length;
+        const tokenCount = Math.round(wordCount * 1.3);
+        const gptCost = (tokenCount / 1000) * 0.09;
+        const ttsCost = (charCount / 1000000) * 15;
+        
+        chunks.push({
+          id: chunkId++,
+          originalText: currentChunk.trim(),
+          modernizedText: "",
+          charCount,
+          tokenCount,
+          wordCount,
+          estimatedCost: gptCost + ttsCost,
+          edited: false,
+          flagged: false,
+          status: "pending",
+        });
+        currentChunk = trimmedSentence + " ";
+      } else {
+        currentChunk += trimmedSentence + " ";
+      }
+    }
+
+    // Add the last chunk
+    if (currentChunk.trim().length > 0) {
+      const wordCount = currentChunk.trim().split(/\s+/).length;
+      const charCount = currentChunk.trim().length;
+      const tokenCount = Math.round(wordCount * 1.3);
+      const gptCost = (tokenCount / 1000) * 0.09;
+      const ttsCost = (charCount / 1000000) * 15;
+      
+      chunks.push({
+        id: chunkId++,
+        originalText: currentChunk.trim(),
+        modernizedText: "",
+        charCount,
+        tokenCount,
+        wordCount,
+        estimatedCost: gptCost + ttsCost,
+        edited: false,
+        flagged: false,
+        status: "pending",
+      });
+    }
+
+    return chunks;
+  };
+
   const handleProjectConfigure = (config: ProjectConfig) => {
     if (!uploadedFile) return;
 
@@ -337,6 +434,9 @@ export default function App() {
     const endIndex = Math.floor((text.length * config.endPosition) / 100);
     const selectedText = text.slice(startIndex, endIndex);
 
+    // Chunk the selected text into manageable pieces
+    const newChunks = chunkText(selectedText, 500);
+
     const newBook: Book = {
       id: Date.now().toString(),
       title: config.title,
@@ -345,11 +445,13 @@ export default function App() {
       coverGradient: gradients[Math.floor(Math.random() * gradients.length)],
       uploadedAt: new Date(),
       status: "processing",
-      originalText: selectedText.slice(0, 2000), // Store a preview
+      originalText: selectedText, // Store the full selected text
+      chunks: newChunks, // Store chunks with the book
     };
 
     setBooks((prev) => [newBook, ...prev]);
     setSelectedBook(newBook);
+    setChunks(newChunks);
 
     // Simulate processing with the config
     setTimeout(() => {
@@ -382,6 +484,22 @@ export default function App() {
 
   const handleOpenBook = (book: Book) => {
     setSelectedBook(book);
+    
+    // Load chunks for this book (or generate them if not available)
+    if (book.chunks && book.chunks.length > 0) {
+      setChunks(book.chunks);
+    } else if (book.originalText) {
+      // Generate chunks from original text if they don't exist
+      const generatedChunks = chunkText(book.originalText, 500);
+      setChunks(generatedChunks);
+      // Update the book with generated chunks
+      setBooks((prev) =>
+        prev.map((b) =>
+          b.id === book.id ? { ...b, chunks: generatedChunks } : b
+        )
+      );
+    }
+    
     if (book.status === "audio-ready") {
       setCurrentView("player");
     } else if (book.status === "modernized" || book.status === "processing") {
@@ -466,27 +584,30 @@ export default function App() {
     );
   };
 
-  const handleProceedToAudioBuilder = () => {
-    setCurrentView("batch-builder");
+  const [segmentConfig, setSegmentConfig] = useState({ chunksPerSegment: 3 });
+
+  const handleProceedToSegmentBuilder = (chunksPerSegment: number) => {
+    setSegmentConfig({ chunksPerSegment });
+    setCurrentView("segment-builder");
   };
 
-  const handleSubmitBatches = (batches: any[]) => {
-    // Simulate audio generation
+  const handleGenerateAudioSegments = (segments: any[]) => {
+    // Simulate audio generation from segments
     if (selectedBook) {
+      const audioSegments = segments.map((seg, index) => ({
+        id: `seg-${Date.now()}-${index}`,
+        chunkIndex: seg.chunkIds[0],
+        audioUrl: `mock-audio-${index}.mp3`,
+        duration: seg.estimatedDuration,
+      }));
+
       setBooks((prev) =>
         prev.map((b) =>
           b.id === selectedBook.id
             ? {
                 ...b,
                 status: "audio-ready",
-                audioSegments: [
-                  {
-                    id: "seg-" + Date.now(),
-                    chunkIndex: 0,
-                    audioUrl: "mock-audio.mp3",
-                    duration: 5.5,
-                  },
-                ],
+                audioSegments,
               }
             : b
         )
@@ -496,14 +617,7 @@ export default function App() {
           ? {
               ...prev,
               status: "audio-ready",
-              audioSegments: [
-                {
-                  id: "seg-" + Date.now(),
-                  chunkIndex: 0,
-                  audioUrl: "mock-audio.mp3",
-                  duration: 5.5,
-                },
-              ],
+              audioSegments,
             }
           : null
       );
@@ -521,7 +635,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        {currentView !== "project-setup" && currentView !== "chunk-review" && currentView !== "batch-builder" && (
+        {currentView !== "project-setup" && currentView !== "chunk-review" && currentView !== "segment-builder" && (
           <Header
             currentView={currentView}
             onNavigate={(view) => {
@@ -569,15 +683,16 @@ export default function App() {
               chunks={chunks}
               onBack={() => setCurrentView("library")}
               onEditChunk={handleEditChunk}
-              onProceedToAudioBuilder={handleProceedToAudioBuilder}
+              onProceedToSegmentBuilder={handleProceedToSegmentBuilder}
             />
           )}
 
-          {currentView === "batch-builder" && (
-            <BatchBuilder
-              totalChunks={chunks.length}
+          {currentView === "segment-builder" && (
+            <SegmentBuilder
+              chunks={chunks}
+              chunksPerSegment={segmentConfig.chunksPerSegment}
               onBack={() => setCurrentView("chunk-review")}
-              onSubmitBatches={handleSubmitBatches}
+              onGenerateAudio={handleGenerateAudioSegments}
             />
           )}
 
