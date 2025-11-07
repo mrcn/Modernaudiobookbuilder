@@ -62,7 +62,7 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
               <h1 className="text-lg sm:text-2xl tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Audibler
               </h1>
-              <p className="hidden sm:block text-xs text-neutral-500 tracking-wide">Old books, reborn in modern voice</p>
+              <p className="hidden sm:block text-xs text-neutral-500 tracking-wide">Old books, reborn in modern voice • v2.2 (Smart chunking)</p>
             </div>
           </button>
 

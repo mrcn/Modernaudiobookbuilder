@@ -48,8 +48,9 @@ export function ProjectSetup({ fileName, fileSize, fileContent, onConfigure, onC
     const paragraphs = selectedContent.split(/\n\n+/).filter(p => p.trim().length > 0);
     const paragraphCount = paragraphs.length;
     
-    // Estimate chunks (each paragraph becomes a chunk)
-    const estimatedChunks = paragraphCount;
+    // Estimate chunks based on target size of 2000 characters per chunk
+    const TARGET_CHUNK_SIZE = 2000;
+    const estimatedChunks = Math.ceil(selectedChars / TARGET_CHUNK_SIZE);
     
     // Token estimates (1 token ≈ 4 characters)
     const inputTokens = Math.ceil(selectedChars / 4);

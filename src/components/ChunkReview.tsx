@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ArrowLeft, Zap, Search, Filter, CheckSquare, Square, ChevronDown, ChevronUp, RotateCcw, Check, ArrowRight, Settings } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -135,6 +135,14 @@ export function ChunkReview({
 }: ChunkReviewProps) {
   // ALWAYS use provided chunks from App.tsx - no fallback
   const [chunks, setChunks] = useState<Chunk[]>(providedChunks || []);
+  
+  // Sync chunks when prop changes
+  useEffect(() => {
+    if (providedChunks) {
+      setChunks(providedChunks);
+    }
+  }, [providedChunks]);
+  
   const [selectedChunkIds, setSelectedChunkIds] = useState<Set<number>>(new Set());
   const [expandedChunkId, setExpandedChunkId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -372,24 +380,25 @@ export function ChunkReview({
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs text-blue-700">How long should each audio segment be?</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl tabular-nums text-blue-900">{targetSegmentDuration}</span>
-                  <span className="text-sm text-blue-700">seconds</span>
+                  <span className="text-3xl tabular-nums text-blue-900">{targetSegmentDuration < 60 ? targetSegmentDuration : ''}</span>
+                  {targetSegmentDuration < 60 && <span className="text-sm text-blue-700">seconds</span>}
+                  {targetSegmentDuration >= 60 && <span className="text-2xl tabular-nums text-blue-900">{formatTime(targetSegmentDuration)}</span>}
                 </div>
               </div>
               
               <Slider
                 value={[targetSegmentDuration]}
                 min={15}
-                max={300}
+                max={10800}
                 step={15}
                 onValueChange={(value) => setTargetSegmentDuration(value[0])}
                 className="mb-3"
               />
               
               <div className="flex items-center justify-between text-xs text-blue-600">
-                <span>15s (very short)</span>
+                <span>15s (min)</span>
                 <span>{formatTime(targetSegmentDuration)}</span>
-                <span>5m (very long)</span>
+                <span>3h (max)</span>
               </div>
             </div>
 
@@ -499,7 +508,7 @@ export function ChunkReview({
               <div>
                 <h3 className="text-lg sm:text-xl">Chunk Workspace</h3>
                 <p className="text-xs sm:text-sm text-neutral-600">
-                  Modernize chunks, then create audio segments
+                  {chunks.length} total chunks • Modernize chunks, then create audio segments
                 </p>
               </div>
             </div>
@@ -773,9 +782,15 @@ export function ChunkReview({
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                       <Filter className="w-12 h-12 text-neutral-300 mx-auto mb-3" strokeWidth={1.5} />
-                      <p className="text-neutral-500">No chunks match your filters</p>
+                      <p className="text-neutral-500">
+                        {chunks.length === 0 
+                          ? "No chunks available" 
+                          : "No chunks match your filters"}
+                      </p>
                       <p className="text-xs text-neutral-400 mt-1">
-                        Try adjusting your search or filter
+                        {chunks.length === 0 
+                          ? "Upload a book to get started"
+                          : "Try adjusting your search or filter"}
                       </p>
                     </div>
                   </div>

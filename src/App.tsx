@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { LibraryView } from "./components/LibraryView";
 import { UploadScreen } from "./components/UploadScreen";
@@ -12,6 +12,8 @@ import { PublicLibraryView } from "./components/PublicLibraryView";
 import { FeedView } from "./components/FeedView";
 import { EditionCreator } from "./components/EditionCreator";
 import { ClipCreator } from "./components/ClipCreator";
+import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner@2.0.3";
 
 export type Book = {
   id: string;
@@ -76,7 +78,20 @@ export type Clip = {
 type View = "library" | "upload" | "project-setup" | "chunk-review" | "segment-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>("chunk-review");
+  // Set browser tab title to show version and show welcome toast
+  useEffect(() => {
+    document.title = "Audibler v2.2 - Smart Chunking Fixed";
+    
+    // Show version notification
+    setTimeout(() => {
+      toast.success("Smart Chunking v2.2", {
+        description: "Now handles books without paragraph breaks! Upload to test.",
+        duration: 5000,
+      });
+    }, 1000);
+  }, []);
+  
+  const [currentView, setCurrentView] = useState<View>("library");
   const [uploadedFile, setUploadedFile] = useState<{ file: File; content: string } | null>(null);
   // Helper to generate sample chunks for demo books
   const generateSampleChunks = (text: string, count: number = 5): Chunk[] => {
@@ -927,27 +942,24 @@ export default function App() {
     setCurrentView("project-setup");
   };
 
-  // Function to chunk text by paragraphs (natural boundaries)
-  const chunkText = (text: string): Chunk[] => {
-    // Split by paragraphs (double newline or more)
-    const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+  // Function to chunk text by target character count with natural boundaries
+  const chunkText = (text: string, targetChars: number = 2000): Chunk[] => {
     const chunks: Chunk[] = [];
-
-    paragraphs.forEach((paragraph, index) => {
-      const trimmedParagraph = paragraph.trim();
-      const wordCount = trimmedParagraph.split(/\s+/).length;
-      const charCount = trimmedParagraph.length;
+    let chunkIndex = 0;
+    
+    // Helper to create a chunk
+    const createChunk = (text: string) => {
+      const wordCount = text.split(/\s+/).length;
+      const charCount = text.length;
       const tokenCount = Math.round(wordCount * 1.3);
-      
-      // Cost calculation: GPT-4 Turbo + TTS
       const gptInputCost = (tokenCount / 1000) * 0.01;
       const gptOutputCost = (tokenCount / 1000) * 0.03;
       const ttsCost = (charCount / 1000000) * 15;
       const totalCost = gptInputCost + gptOutputCost + ttsCost;
       
-      chunks.push({
-        id: index,
-        originalText: trimmedParagraph,
+      return {
+        id: chunkIndex++,
+        originalText: text,
         modernizedText: "",
         charCount,
         tokenCount,
@@ -955,10 +967,63 @@ export default function App() {
         estimatedCost: totalCost,
         edited: false,
         flagged: false,
-        status: "pending",
-      });
-    });
-
+        status: "pending" as const,
+      };
+    };
+    
+    // Split by paragraphs first
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+    
+    // If no paragraphs found (no double newlines), split by single newlines
+    const textSegments = paragraphs.length > 0 ? paragraphs : text.split(/\n+/).filter(p => p.trim().length > 0);
+    
+    let currentChunk = "";
+    
+    for (const segment of textSegments) {
+      const trimmedSegment = segment.trim();
+      
+      // If this segment alone exceeds target, split it by sentences
+      if (trimmedSegment.length > targetChars * 2) {
+        // Save current chunk if exists
+        if (currentChunk.length > 0) {
+          chunks.push(createChunk(currentChunk));
+          currentChunk = "";
+        }
+        
+        // Split large segment by sentences
+        const sentences = trimmedSegment.split(/[.!?]+\s+/);
+        let tempChunk = "";
+        
+        for (const sentence of sentences) {
+          if (tempChunk.length > 0 && tempChunk.length + sentence.length > targetChars) {
+            chunks.push(createChunk(tempChunk));
+            tempChunk = sentence;
+          } else {
+            tempChunk += (tempChunk.length > 0 ? ". " : "") + sentence;
+          }
+        }
+        
+        if (tempChunk.length > 0) {
+          currentChunk = tempChunk;
+        }
+      }
+      // If adding segment would exceed target, save current chunk
+      else if (currentChunk.length > 0 && currentChunk.length + trimmedSegment.length + 2 > targetChars) {
+        chunks.push(createChunk(currentChunk));
+        currentChunk = trimmedSegment;
+      }
+      // Add segment to current chunk
+      else {
+        currentChunk += (currentChunk.length > 0 ? "\n\n" : "") + trimmedSegment;
+      }
+    }
+    
+    // Save final chunk
+    if (currentChunk.length > 0) {
+      chunks.push(createChunk(currentChunk));
+    }
+    
+    // Fallback: if still no chunks (empty text), return empty array
     return chunks;
   };
 
@@ -978,8 +1043,13 @@ export default function App() {
     const endIndex = Math.floor((text.length * config.endPosition) / 100);
     const selectedText = text.slice(startIndex, endIndex);
 
-    // Chunk the selected text by paragraphs (natural boundaries)
+    console.log(`📚 Chunking text: ${selectedText.length} characters`);
+    console.log(`📊 Range: ${config.startPosition}% to ${config.endPosition}%`);
+    
+    // Chunk the selected text by target size (2000 chars) with natural boundaries
     const newChunks = chunkText(selectedText);
+    
+    console.log(`✅ Created ${newChunks.length} chunks from selected text`);
 
     const newBook: Book = {
       id: Date.now().toString(),
@@ -1034,7 +1104,7 @@ export default function App() {
       setChunks(book.chunks);
     } else if (book.originalText) {
       // Generate chunks from original text if they don't exist
-      const generatedChunks = chunkText(book.originalText, 500);
+      const generatedChunks = chunkText(book.originalText, 2000);
       setChunks(generatedChunks);
       // Update the book with generated chunks
       setBooks((prev) =>
@@ -1303,6 +1373,9 @@ export default function App() {
           )}
         </main>
       </div>
+      
+      {/* Toast notifications */}
+      <Toaster position="bottom-right" richColors />
     </div>
   );
 }

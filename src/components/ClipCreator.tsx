@@ -37,8 +37,12 @@ export function ClipCreator({ book, onSave, onCancel }: ClipCreatorProps) {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
@@ -109,9 +113,10 @@ export function ClipCreator({ book, onSave, onCancel }: ClipCreatorProps) {
             <Label>Audio Selection</Label>
             <div className="flex items-center gap-2 text-sm text-neutral-600">
               <Play className="w-4 h-4" strokeWidth={2.5} />
-              <span>{duration}s clip</span>
+              <span>{formatTime(duration)} clip</span>
             </div>
           </div>
+          <p className="text-xs text-neutral-500 -mt-2">Select clips from 15 seconds up to 3 hours</p>
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -121,7 +126,7 @@ export function ClipCreator({ book, onSave, onCancel }: ClipCreatorProps) {
               </div>
               <Slider
                 value={[startTime]}
-                max={60}
+                max={10800}
                 step={1}
                 onValueChange={(value) => setStartTime(Math.min(value[0], endTime - 1))}
               />
@@ -134,7 +139,7 @@ export function ClipCreator({ book, onSave, onCancel }: ClipCreatorProps) {
               </div>
               <Slider
                 value={[endTime]}
-                max={60}
+                max={10800}
                 step={1}
                 onValueChange={(value) => setEndTime(Math.max(value[0], startTime + 1))}
               />

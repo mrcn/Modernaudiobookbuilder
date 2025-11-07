@@ -65,6 +65,10 @@ export function UploadScreen({ onFileSelected, onCancel }: UploadScreenProps) {
         <p className="text-neutral-600 text-base sm:text-lg max-w-xl mx-auto px-4">
           Drop a plain text file of a public domain book and watch it transform into a modern audiobook
         </p>
+        <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-xs text-emerald-700">NEW: Smart chunking (2000 chars/chunk)</span>
+        </div>
       </div>
 
       <div
