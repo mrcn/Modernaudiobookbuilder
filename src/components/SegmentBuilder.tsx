@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ArrowLeft, Play, Pause, SkipForward, SkipBack, Download, Edit2, Check, X, Volume2, Scissors } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipForward, SkipBack, Download, Edit2, Check, X, Volume2, Scissors, MoreVertical } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -15,6 +15,7 @@ type AudioTrack = {
   duration: number; // in seconds
   audioUrl: string;
   status: "ready" | "playing" | "paused";
+  fileSize: number; // in bytes
 };
 
 type SegmentBuilderProps = {
@@ -24,6 +25,22 @@ type SegmentBuilderProps = {
   onGenerateAudio: (segments: any[]) => void;
 };
 
+// Mock text samples of varying lengths
+const mockTexts = [
+  "In the beginning, there was nothing but endless void. The darkness stretched infinitely in all directions, a canvas waiting for creation to begin its masterwork.",
+  "She walked through the ancient forest, where towering trees whispered secrets of centuries past. The morning light filtered through the canopy, casting dancing shadows on the moss-covered ground below.",
+  "The old bookstore smelled of vanilla and aged paper—a scent that transported visitors to another time. Leather-bound volumes lined every wall from floor to ceiling, each one a gateway to adventure.",
+  "Time moved differently in the mountains. Hours felt like minutes as she climbed higher, the valley shrinking behind her with each determined step forward.",
+  "The city never slept, its heartbeat a constant rhythm of honking horns and hurried footsteps. Neon lights reflected off rain-slicked streets, painting the night in electric hues of pink and blue.",
+  "He discovered the letter tucked inside an old atlas, its edges yellowed with age. The handwriting was elegant, flowing—words from another era that somehow felt urgent even now.",
+  "The ocean stretched to the horizon, an endless expanse of possibility. Waves crashed against the shore in steady percussion, each one bringing treasures from depths unknown.",
+  "In the quiet moments before dawn, the world held its breath. Birds began their tentative songs, testing the air, announcing the arrival of a new day filled with potential.",
+  "The laboratory was her sanctuary, where equations danced across whiteboards and beakers bubbled with promise. Here, she could lose herself in the pursuit of understanding.",
+  "Memories are curious things—fluid, changeable, yet somehow more real than the present moment. They shape us in ways we rarely acknowledge, building the architecture of who we become.",
+  "The train rattled through the countryside, carrying passengers toward uncertain destinations. Through the window, fields of golden wheat swayed in the afternoon breeze like waves on a vast, earthen sea.",
+  "Jazz music spilled from the open doorway, mingling with laughter and the clink of glasses. Inside, the atmosphere was electric with creativity, with connection, with the simple joy of being alive.",
+];
+
 export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAudio }: SegmentBuilderProps) {
   // Only show completed/modernized chunks
   const modernizedChunks = useMemo(() => 
@@ -31,20 +48,33 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
     [chunks]
   );
 
-  // Generate audio tracks from modernized chunks (one track per chunk)
+  // Generate realistic audio tracks with variety
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>(() => {
-    return modernizedChunks.map((chunk, index) => {
-      // Estimate duration: ~150 words per minute
-      const estimatedDuration = Math.ceil((chunk.wordCount / 150) * 60);
+    // Create at least 12 examples to show variety, or use actual chunks if available
+    const trackCount = Math.max(12, modernizedChunks.length);
+    
+    return Array.from({ length: trackCount }).map((_, index) => {
+      const chunk = modernizedChunks[index];
+      
+      // Vary durations realistically (2-15 minutes)
+      const durations = [134, 267, 189, 445, 312, 523, 201, 678, 156, 389, 234, 567];
+      const duration = durations[index % durations.length];
+      
+      // Realistic file sizes (roughly 1MB per minute of audio)
+      const fileSize = Math.floor(duration * 16000 + Math.random() * 5000);
+      
+      // Use chunk data if available, otherwise use mock data
+      const text = chunk?.modernizedText || chunk?.originalText || mockTexts[index % mockTexts.length];
       
       return {
         id: index,
-        chunkId: chunk.id,
-        name: `Track ${index + 1}`,
-        text: chunk.modernizedText || chunk.originalText,
-        duration: estimatedDuration,
-        audioUrl: `mock-audio-track-${index}.mp3`, // Mock audio URL
+        chunkId: chunk?.id || index,
+        name: `${index + 1}`, // Simple chronological numbering
+        text,
+        duration,
+        audioUrl: `audio-track-${index + 1}.mp3`,
         status: "ready" as const,
+        fileSize,
       };
     });
   });
@@ -53,25 +83,28 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
   const [playbackProgress, setPlaybackProgress] = useState<{ [key: number]: number }>({});
-  const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
+  const [volume, setVolume] = useState(80);
 
   const stats = useMemo(() => {
     const totalDuration = audioTracks.reduce((sum, t) => sum + t.duration, 0);
-    const totalWords = modernizedChunks.reduce((sum, c) => sum + c.wordCount, 0);
+    const totalSize = audioTracks.reduce((sum, t) => sum + t.fileSize, 0);
     
     return {
       totalTracks: audioTracks.length,
       totalDuration,
-      totalWords,
+      totalSize,
     };
-  }, [audioTracks, modernizedChunks]);
+  }, [audioTracks]);
 
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
+    const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    if (hours > 0) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
   };
 
   const handlePlayPause = (trackId: number) => {
@@ -185,7 +218,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
               <div>
                 <h3 className="text-lg sm:text-xl">Audio Playlist</h3>
                 <p className="text-xs sm:text-sm text-neutral-600">
-                  {stats.totalTracks} track{stats.totalTracks !== 1 ? 's' : ''} • {formatTime(stats.totalDuration)} total
+                  {stats.totalTracks} track{stats.totalTracks !== 1 ? 's' : ''} • {formatTime(stats.totalDuration)} total • {formatFileSize(stats.totalSize)}
                 </p>
               </div>
             </div>
@@ -225,14 +258,14 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
             </div>
 
             <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-neutral-600 mb-1">Total Words</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{stats.totalWords.toLocaleString()}</p>
+              <p className="text-xs text-neutral-600 mb-1">Total Size</p>
+              <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{formatFileSize(stats.totalSize)}</p>
             </div>
 
             <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-3 sm:p-4 shadow-sm">
               <p className="text-xs text-emerald-700 mb-1">Now Playing</p>
               <p className="text-base sm:text-lg text-emerald-900">
-                {currentTrack ? currentTrack.name : 'None'}
+                {currentTrack ? `Track ${currentTrack.name}` : 'None'}
               </p>
             </div>
           </div>
@@ -259,7 +292,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                     {/* Track Header */}
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           isCurrentlyPlaying 
                             ? "bg-gradient-to-r from-purple-600 to-pink-600" 
                             : "bg-gradient-to-r from-neutral-400 to-neutral-500"
@@ -272,12 +305,13 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                             <Input
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
-                              className="h-8"
+                              className="h-9 max-w-[200px]"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleSaveRename(track.id);
                                 if (e.key === 'Escape') handleCancelRename();
                               }}
+                              placeholder="Track name"
                             />
                             <Button
                               size="sm"
@@ -295,29 +329,32 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                             </Button>
                           </div>
                         ) : (
-                          <div className="flex-1">
-                            <h4 className="text-base sm:text-lg">{track.name}</h4>
-                            <p className="text-xs text-neutral-600">
-                              Chunk #{track.chunkId} • {formatTime(track.duration)}
-                            </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-base sm:text-lg">Track {track.name}</h4>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                                onClick={() => handleRename(track.id)}
+                              >
+                                <Edit2 className="w-3 h-3" strokeWidth={2.5} />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-neutral-600 flex-wrap">
+                              <span>{formatTime(track.duration)}</span>
+                              <span>•</span>
+                              <span>{formatFileSize(track.fileSize)}</span>
+                              <span>•</span>
+                              <span className="font-mono text-[10px]">{track.audioUrl}</span>
+                            </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {editingTrackId !== track.id && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRename(track.id)}
-                          >
-                            <Edit2 className="w-4 h-4" strokeWidth={2.5} />
-                          </Button>
-                        )}
-                        <Badge variant={isCurrentlyPlaying ? "default" : "secondary"} className={isCurrentlyPlaying ? "bg-purple-600" : ""}>
-                          {track.status === "playing" ? "Playing" : track.status === "paused" ? "Paused" : "Ready"}
-                        </Badge>
-                      </div>
+                      <Badge variant={isCurrentlyPlaying ? "default" : "secondary"} className={isCurrentlyPlaying ? "bg-purple-600" : ""}>
+                        {track.status === "playing" ? "Playing" : track.status === "paused" ? "Paused" : "Ready"}
+                      </Badge>
                     </div>
 
                     {/* Track Text */}
@@ -331,15 +368,15 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                     <div className="space-y-3">
                       {/* Waveform / Progress Bar */}
                       <div className="space-y-2">
-                        <div className="h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg overflow-hidden relative">
+                        <div className="h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg overflow-hidden relative cursor-pointer">
                           {/* Simulated waveform background */}
                           <div className="absolute inset-0 flex items-center justify-around px-1">
-                            {Array.from({ length: 50 }).map((_, i) => {
-                              const height = Math.random() * 60 + 20;
+                            {Array.from({ length: 80 }).map((_, i) => {
+                              const height = Math.random() * 70 + 15;
                               return (
                                 <div
                                   key={i}
-                                  className="w-1 bg-purple-300/40 rounded-full"
+                                  className="w-0.5 bg-purple-300/50 rounded-full transition-colors"
                                   style={{ height: `${height}%` }}
                                 />
                               );
@@ -348,7 +385,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                           
                           {/* Progress overlay */}
                           <div 
-                            className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-30 transition-all duration-300"
+                            className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-40 transition-all duration-300"
                             style={{ width: `${progressPercent}%` }}
                           />
                         </div>
@@ -392,23 +429,15 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                         <Button variant="outline" size="sm">
                           <Download className="w-4 h-4" strokeWidth={2.5} />
                         </Button>
+
+                        <Button variant="outline" size="sm" className="px-2">
+                          <MoreVertical className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
                       </div>
                     </div>
                   </div>
                 );
               })}
-
-              {audioTracks.length === 0 && (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <Volume2 className="w-12 h-12 text-neutral-300 mx-auto mb-3" strokeWidth={1.5} />
-                    <p className="text-neutral-500">No audio tracks available</p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      Go back and modernize some chunks first
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </ScrollArea>
         </div>
