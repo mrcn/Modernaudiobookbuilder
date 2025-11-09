@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "user-prompt-submit": {
+      "command": "afplay /Users/marcin/Code/metal-hit.mp3"
+    }
+  }
+}
