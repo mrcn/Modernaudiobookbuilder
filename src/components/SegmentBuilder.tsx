@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ArrowLeft, Play, Pause, SkipForward, SkipBack, Download, Edit2, Check, X, Volume2, Scissors, MoreVertical } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipForward, SkipBack, Download, Edit2, Check, X, Volume2, MoreVertical, Music2, FileAudio } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Slider } from "./ui/slider";
+import { Separator } from "./ui/separator";
 import { Chunk } from "./ChunkReview";
 
 type AudioTrack = {
@@ -25,7 +26,7 @@ type SegmentBuilderProps = {
   onGenerateAudio: (segments: any[]) => void;
 };
 
-// Mock text samples of varying lengths
+// Mock text samples
 const mockTexts = [
   "In the beginning, there was nothing but endless void. The darkness stretched infinitely in all directions, a canvas waiting for creation to begin its masterwork.",
   "She walked through the ancient forest, where towering trees whispered secrets of centuries past. The morning light filtered through the canopy, casting dancing shadows on the moss-covered ground below.",
@@ -35,41 +36,44 @@ const mockTexts = [
   "He discovered the letter tucked inside an old atlas, its edges yellowed with age. The handwriting was elegant, flowing—words from another era that somehow felt urgent even now.",
   "The ocean stretched to the horizon, an endless expanse of possibility. Waves crashed against the shore in steady percussion, each one bringing treasures from depths unknown.",
   "In the quiet moments before dawn, the world held its breath. Birds began their tentative songs, testing the air, announcing the arrival of a new day filled with potential.",
-  "The laboratory was her sanctuary, where equations danced across whiteboards and beakers bubbled with promise. Here, she could lose herself in the pursuit of understanding.",
-  "Memories are curious things—fluid, changeable, yet somehow more real than the present moment. They shape us in ways we rarely acknowledge, building the architecture of who we become.",
-  "The train rattled through the countryside, carrying passengers toward uncertain destinations. Through the window, fields of golden wheat swayed in the afternoon breeze like waves on a vast, earthen sea.",
-  "Jazz music spilled from the open doorway, mingling with laughter and the clink of glasses. Inside, the atmosphere was electric with creativity, with connection, with the simple joy of being alive.",
 ];
 
 export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAudio }: SegmentBuilderProps) {
+  // Project metadata editing
+  const [projectTitle, setProjectTitle] = useState("Pride and Prejudice");
+  const [projectAuthor, setProjectAuthor] = useState("Jane Austen");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingAuthor, setEditingAuthor] = useState(false);
+  const [tempTitle, setTempTitle] = useState(projectTitle);
+  const [tempAuthor, setTempAuthor] = useState(projectAuthor);
+
   // Only show completed/modernized chunks
   const modernizedChunks = useMemo(() => 
     chunks.filter(c => c.status === "completed" && c.modernizedText),
     [chunks]
   );
 
-  // Generate realistic audio tracks with variety
+  // Generate realistic audio tracks
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>(() => {
-    // Create at least 12 examples to show variety, or use actual chunks if available
-    const trackCount = Math.max(12, modernizedChunks.length);
+    const trackCount = Math.max(8, modernizedChunks.length);
     
     return Array.from({ length: trackCount }).map((_, index) => {
       const chunk = modernizedChunks[index];
       
       // Vary durations realistically (2-15 minutes)
-      const durations = [134, 267, 189, 445, 312, 523, 201, 678, 156, 389, 234, 567];
+      const durations = [134, 267, 189, 445, 312, 523, 201, 678];
       const duration = durations[index % durations.length];
       
       // Realistic file sizes (roughly 1MB per minute of audio)
       const fileSize = Math.floor(duration * 16000 + Math.random() * 5000);
       
-      // Use chunk data if available, otherwise use mock data
+      // Use chunk data if available
       const text = chunk?.modernizedText || chunk?.originalText || mockTexts[index % mockTexts.length];
       
       return {
         id: index,
         chunkId: chunk?.id || index,
-        name: `${index + 1}`, // Simple chronological numbering
+        name: `Track ${index + 1}`,
         text,
         duration,
         audioUrl: `audio-track-${index + 1}.mp3`,
@@ -81,7 +85,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
 
   const [currentlyPlayingId, setCurrentlyPlayingId] = useState<number | null>(null);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState("");
+  const [editingTrackName, setEditingTrackName] = useState("");
   const [playbackProgress, setPlaybackProgress] = useState<{ [key: number]: number }>({});
   const [volume, setVolume] = useState(80);
 
@@ -107,15 +111,22 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
     return `${mb.toFixed(1)} MB`;
   };
 
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
   const handlePlayPause = (trackId: number) => {
     if (currentlyPlayingId === trackId) {
-      // Pause current track
       setCurrentlyPlayingId(null);
       setAudioTracks(prev => prev.map(t => 
         t.id === trackId ? { ...t, status: "paused" as const } : t
       ));
     } else {
-      // Stop any currently playing track and play this one
       setCurrentlyPlayingId(trackId);
       setAudioTracks(prev => prev.map(t => 
         t.id === trackId 
@@ -123,12 +134,6 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
           : { ...t, status: "ready" as const }
       ));
     }
-  };
-
-  const handleStop = () => {
-    setCurrentlyPlayingId(null);
-    setAudioTracks(prev => prev.map(t => ({ ...t, status: "ready" as const })));
-    setPlaybackProgress({});
   };
 
   const handleSkipNext = () => {
@@ -149,25 +154,46 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
     }
   };
 
-  const handleRename = (trackId: number) => {
+  const handleSaveTitle = () => {
+    setProjectTitle(tempTitle);
+    setEditingTitle(false);
+  };
+
+  const handleCancelTitle = () => {
+    setTempTitle(projectTitle);
+    setEditingTitle(false);
+  };
+
+  const handleSaveAuthor = () => {
+    setProjectAuthor(tempAuthor);
+    setEditingAuthor(false);
+  };
+
+  const handleCancelAuthor = () => {
+    setTempAuthor(projectAuthor);
+    setEditingAuthor(false);
+  };
+
+  const handleRenameTrack = (trackId: number) => {
     const track = audioTracks.find(t => t.id === trackId);
     if (track) {
       setEditingTrackId(trackId);
-      setEditingName(track.name);
+      setEditingTrackName(track.name);
     }
   };
 
-  const handleSaveRename = (trackId: number) => {
-    setAudioTracks(prev => prev.map(t => 
-      t.id === trackId ? { ...t, name: editingName } : t
-    ));
-    setEditingTrackId(null);
-    setEditingName("");
+  const handleSaveTrackRename = () => {
+    if (editingTrackId !== null) {
+      setAudioTracks(prev => prev.map(t => 
+        t.id === editingTrackId ? { ...t, name: editingTrackName } : t
+      ));
+      setEditingTrackId(null);
+    }
   };
 
-  const handleCancelRename = () => {
+  const handleCancelTrackRename = () => {
     setEditingTrackId(null);
-    setEditingName("");
+    setEditingTrackName("");
   };
 
   // Simulate playback progress
@@ -182,7 +208,6 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
         
         const newProgress = current + 1;
         if (newProgress >= track.duration) {
-          // Track finished, skip to next
           handleSkipNext();
           return { ...prev, [currentlyPlayingId]: 0 };
         }
@@ -197,76 +222,150 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
   const currentTrack = audioTracks.find(t => t.id === currentlyPlayingId);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
-      {/* Ambient background blur elements */}
+    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 relative overflow-hidden">
+      {/* Vignette Overlay */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-10"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0.6) 100%)'
+        }}
+      />
+
+      {/* Ambient background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 h-full flex flex-col">
-        {/* Header */}
-        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
+      <div className="relative z-20 h-full flex flex-col">
+        {/* Header - Project Info with Editable Title/Author */}
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/5">
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={onBack}
                 className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white"
               >
                 <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
               </button>
-              <div>
-                <h3 className="text-lg sm:text-xl text-white">Audio Playlist</h3>
-                <p className="text-xs sm:text-sm text-neutral-400">
-                  {stats.totalTracks} track{stats.totalTracks !== 1 ? 's' : ''} • {formatTime(stats.totalDuration)} total • {formatFileSize(stats.totalSize)}
-                </p>
+              <div className="flex-1">
+                <p className="text-xs text-neutral-500 mb-1">Audio Project</p>
+                
+                {/* Editable Title */}
+                {editingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      className="text-xl border-2 border-purple-500 bg-neutral-800/50 text-white"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveTitle();
+                        if (e.key === 'Escape') handleCancelTitle();
+                      }}
+                    />
+                    <button
+                      onClick={handleSaveTitle}
+                      className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                    >
+                      <Check className="w-4 h-4" strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={handleCancelTitle}
+                      className="p-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingTitle(true);
+                      setTempTitle(projectTitle);
+                    }}
+                    className="group flex items-center gap-2 text-xl text-white hover:text-purple-300 transition-colors"
+                  >
+                    <span>{projectTitle}</span>
+                    <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2.5} />
+                  </button>
+                )}
+
+                {/* Editable Author */}
+                {editingAuthor ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      value={tempAuthor}
+                      onChange={(e) => setTempAuthor(e.target.value)}
+                      className="text-sm border-2 border-purple-500 bg-neutral-800/50 text-neutral-300"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveAuthor();
+                        if (e.key === 'Escape') handleCancelAuthor();
+                      }}
+                    />
+                    <button
+                      onClick={handleSaveAuthor}
+                      className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                    >
+                      <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={handleCancelAuthor}
+                      className="p-1.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingAuthor(true);
+                      setTempAuthor(projectAuthor);
+                    }}
+                    className="group flex items-center gap-2 text-sm text-neutral-400 hover:text-purple-300 transition-colors mt-1"
+                  >
+                    <span>by {projectAuthor}</span>
+                    <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  <Download className="w-4 h-4 mr-2" strokeWidth={2.5} />
+                  Download All
+                </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSkipPrevious}
-                disabled={currentlyPlayingId === null || currentlyPlayingId === audioTracks[0]?.id}
-              >
-                <SkipBack className="w-4 h-4" strokeWidth={2.5} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSkipNext}
-                disabled={currentlyPlayingId === null || currentlyPlayingId === audioTracks[audioTracks.length - 1]?.id}
-              >
-                <SkipForward className="w-4 h-4" strokeWidth={2.5} />
-              </Button>
-            </div>
-          </div>
-        </div>
+            {/* Stats Row */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-neutral-800/40 rounded-lg border border-white/10 p-3">
+                <p className="text-xs text-neutral-500 mb-1">Total Tracks</p>
+                <p className="text-lg tabular-nums text-white">{stats.totalTracks}</p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-950/50 to-pink-950/50 rounded-lg border border-purple-500/30 p-3">
+                <p className="text-xs text-purple-300 mb-1">Duration</p>
+                <p className="text-lg tabular-nums text-white">{formatDuration(stats.totalDuration)}</p>
+              </div>
 
-        {/* Stats Bar */}
-        <div className="flex-none bg-neutral-900/40 backdrop-blur-xl border-b border-white/10 p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-neutral-900/60 rounded-xl border border-white/10 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
-              <p className="text-xs text-neutral-400 mb-1">Total Tracks</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-white">{stats.totalTracks}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-950/50 to-pink-950/50 rounded-xl border border-purple-500/30 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
-              <p className="text-xs text-purple-300 mb-1">Total Duration</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-white">{formatTime(stats.totalDuration)}</p>
-            </div>
+              <div className="bg-neutral-800/40 rounded-lg border border-white/10 p-3">
+                <p className="text-xs text-neutral-500 mb-1">Total Size</p>
+                <p className="text-lg tabular-nums text-white">{formatFileSize(stats.totalSize)}</p>
+              </div>
 
-            <div className="bg-neutral-900/60 rounded-xl border border-white/10 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
-              <p className="text-xs text-neutral-400 mb-1">Total Size</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-white">{formatFileSize(stats.totalSize)}</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-950/50 to-green-950/50 rounded-xl border border-emerald-500/30 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
-              <p className="text-xs text-emerald-300 mb-1">Now Playing</p>
-              <p className="text-base sm:text-lg text-white">
-                {currentTrack ? `Track ${currentTrack.name}` : 'None'}
-              </p>
+              <div className="bg-gradient-to-br from-emerald-950/50 to-green-950/50 rounded-lg border border-emerald-500/30 p-3">
+                <p className="text-xs text-emerald-300 mb-1">Now Playing</p>
+                <p className="text-sm text-white truncate">
+                  {currentTrack ? currentTrack.name : 'None'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -274,7 +373,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
         {/* Playlist Area */}
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-6 space-y-3">
               {audioTracks.map((track, index) => {
                 const isCurrentlyPlaying = currentlyPlayingId === track.id;
                 const progress = playbackProgress[track.id] || 0;
@@ -283,164 +382,182 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                 return (
                   <div
                     key={track.id}
-                    className={`rounded-xl border p-4 sm:p-6 transition-all ${
+                    className={`rounded-xl border p-4 transition-all ${
                       isCurrentlyPlaying
                         ? "bg-gradient-to-br from-purple-950/50 to-pink-950/50 border-purple-500/50 shadow-lg shadow-purple-500/20"
-                        : "bg-neutral-900/40 backdrop-blur-xl border-white/10 hover:border-purple-500/30 hover:shadow-md"
+                        : "bg-neutral-900/40 backdrop-blur-xl border-white/10 hover:border-purple-500/30"
                     }`}
                   >
-                    {/* Track Header */}
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                          isCurrentlyPlaying 
-                            ? "bg-gradient-to-r from-purple-600 to-pink-600" 
-                            : "bg-gradient-to-r from-neutral-700 to-neutral-600"
-                        }`}>
-                          <span className="text-white">{index + 1}</span>
-                        </div>
-                        
-                        {editingTrackId === track.id ? (
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="h-9 max-w-[200px]"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveRename(track.id);
-                                if (e.key === 'Escape') handleCancelRename();
-                              }}
-                              placeholder="Track name"
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleSaveRename(track.id)}
-                            >
-                              <Check className="w-4 h-4" strokeWidth={2.5} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancelRename}
-                            >
-                              <X className="w-4 h-4" strokeWidth={2.5} />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="text-base sm:text-lg text-white">Track {track.name}</h4>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 opacity-60 hover:opacity-100 text-neutral-400 hover:text-white"
-                                onClick={() => handleRename(track.id)}
-                              >
-                                <Edit2 className="w-3 h-3" strokeWidth={2.5} />
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-neutral-400 flex-wrap">
-                              <span>{formatTime(track.duration)}</span>
-                              <span>•</span>
-                              <span>{formatFileSize(track.fileSize)}</span>
-                              <span>•</span>
-                              <span className="font-mono text-[10px]">{track.audioUrl}</span>
-                            </div>
-                          </div>
-                        )}
+                    <div className="flex items-center gap-4">
+                      {/* Track Number */}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        isCurrentlyPlaying 
+                          ? "bg-gradient-to-r from-purple-600 to-pink-600" 
+                          : "bg-neutral-800"
+                      }`}>
+                        <span className="text-white text-sm">{index + 1}</span>
                       </div>
 
-                      <Badge variant={isCurrentlyPlaying ? "default" : "secondary"} className={isCurrentlyPlaying ? "bg-purple-600" : "bg-neutral-800 text-neutral-300"}>
-                        {track.status === "playing" ? "Playing" : track.status === "paused" ? "Paused" : "Ready"}
-                      </Badge>
-                    </div>
+                      {/* Play/Pause Button */}
+                      <button
+                        onClick={() => handlePlayPause(track.id)}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                          isCurrentlyPlaying
+                            ? "bg-white/20 hover:bg-white/30 text-white"
+                            : "bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        {track.status === "playing" ? (
+                          <Pause className="w-5 h-5" strokeWidth={2.5} />
+                        ) : (
+                          <Play className="w-5 h-5" strokeWidth={2.5} />
+                        )}
+                      </button>
 
-                    {/* Track Text */}
-                    <div className="mb-4 p-4 bg-neutral-950/50 rounded-lg border border-white/10">
-                      <p className="text-sm leading-relaxed text-neutral-300">
-                        {track.text}
-                      </p>
-                    </div>
-
-                    {/* Audio Player */}
-                    <div className="space-y-3">
-                      {/* Waveform / Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="h-16 bg-gradient-to-r from-neutral-800 to-neutral-700 rounded-lg overflow-hidden relative cursor-pointer border border-white/10">
-                          {/* Simulated waveform background */}
-                          <div className="absolute inset-0 flex items-center justify-around px-1">
-                            {Array.from({ length: 80 }).map((_, i) => {
-                              const height = Math.random() * 70 + 15;
-                              return (
-                                <div
-                                  key={i}
-                                  className="w-0.5 bg-neutral-500/50 rounded-full transition-colors"
-                                  style={{ height: `${height}%` }}
-                                />
-                              );
-                            })}
+                      {/* Track Info */}
+                      <div className="flex-1 min-w-0">
+                        {editingTrackId === track.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editingTrackName}
+                              onChange={(e) => setEditingTrackName(e.target.value)}
+                              className="text-sm border-2 border-purple-500 bg-neutral-800/50 text-white"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveTrackRename();
+                                if (e.key === 'Escape') handleCancelTrackRename();
+                              }}
+                            />
+                            <button
+                              onClick={handleSaveTrackRename}
+                              className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                            >
+                              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            </button>
+                            <button
+                              onClick={handleCancelTrackRename}
+                              className="p-1.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            </button>
                           </div>
-                          
-                          {/* Progress overlay */}
+                        ) : (
+                          <button
+                            onClick={() => handleRenameTrack(track.id)}
+                            className="group flex items-center gap-2 text-left w-full"
+                          >
+                            <p className={`text-sm truncate ${isCurrentlyPlaying ? "text-white" : "text-neutral-300"}`}>
+                              {track.name}
+                            </p>
+                            <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-neutral-500" strokeWidth={2.5} />
+                          </button>
+                        )}
+                        <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500">
+                          <span>{formatTime(track.duration)}</span>
+                          <span>•</span>
+                          <span>{formatFileSize(track.fileSize)}</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Indicator */}
+                      {isCurrentlyPlaying && (
+                        <div className="flex items-center gap-3">
+                          <div className="text-xs text-purple-300 tabular-nums">
+                            {formatTime(progress)} / {formatTime(track.duration)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Download Button */}
+                      <button
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-neutral-400 hover:text-white"
+                      >
+                        <Download className="w-4 h-4" strokeWidth={2.5} />
+                      </button>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {isCurrentlyPlaying && (
+                      <div className="mt-3">
+                        <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                           <div 
-                            className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-50 transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
                             style={{ width: `${progressPercent}%` }}
                           />
                         </div>
-
-                        {/* Time display */}
-                        <div className="flex items-center justify-between text-xs text-neutral-400">
-                          <span className="tabular-nums">{formatTime(progress)}</span>
-                          <span className="tabular-nums">{formatTime(track.duration)}</span>
-                        </div>
                       </div>
-
-                      {/* Controls */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={() => handlePlayPause(track.id)}
-                          className={`flex-1 ${
-                            isCurrentlyPlaying
-                              ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                              : ""
-                          }`}
-                          variant={isCurrentlyPlaying ? "default" : "outline"}
-                        >
-                          {track.status === "playing" ? (
-                            <>
-                              <Pause className="w-4 h-4 mr-2" strokeWidth={2.5} />
-                              Pause
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4 mr-2" strokeWidth={2.5} />
-                              Play
-                            </>
-                          )}
-                        </Button>
-
-                        <Button variant="outline" size="sm">
-                          <Scissors className="w-4 h-4 mr-2" strokeWidth={2.5} />
-                          Trim
-                        </Button>
-
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4" strokeWidth={2.5} />
-                        </Button>
-
-                        <Button variant="outline" size="sm" className="px-2">
-                          <MoreVertical className="w-4 h-4" strokeWidth={2.5} />
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </ScrollArea>
         </div>
+
+        {/* Playback Controls Footer */}
+        {currentTrack && (
+          <div className="flex-none bg-neutral-900/90 backdrop-blur-xl border-t border-white/5 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center">
+                  <Music2 className="w-6 h-6 text-white" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-sm text-white">{currentTrack.name}</p>
+                  <p className="text-xs text-neutral-400">
+                    {formatTime(playbackProgress[currentTrack.id] || 0)} / {formatTime(currentTrack.duration)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSkipPrevious}
+                  disabled={currentlyPlayingId === audioTracks[0]?.id}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  <SkipBack className="w-4 h-4" strokeWidth={2.5} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => currentlyPlayingId !== null && handlePlayPause(currentlyPlayingId)}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  {currentTrack.status === "playing" ? (
+                    <Pause className="w-4 h-4" strokeWidth={2.5} />
+                  ) : (
+                    <Play className="w-4 h-4" strokeWidth={2.5} />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSkipNext}
+                  disabled={currentlyPlayingId === audioTracks[audioTracks.length - 1]?.id}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  <SkipForward className="w-4 h-4" strokeWidth={2.5} />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Volume2 className="w-4 h-4 text-neutral-400" strokeWidth={2.5} />
+                <Slider
+                  value={[volume]}
+                  onValueChange={([value]) => setVolume(value)}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-24"
+                />
+                <span className="text-xs text-neutral-500 tabular-nums w-8">{volume}%</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
