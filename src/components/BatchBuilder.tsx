@@ -148,27 +148,27 @@ export function BatchBuilder({ totalChunks, onBack, onSubmitBatches }: BatchBuil
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-50 via-purple-50/30 to-pink-50/30">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
       {/* Ambient background blur elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 h-full flex flex-col">
         {/* Header */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-4 shadow-sm">
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-black/5 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white"
               >
                 <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
               </button>
               <div>
-                <h3 className="text-lg sm:text-xl">Audio Segment Builder</h3>
-                <p className="text-xs sm:text-sm text-neutral-600">
+                <h3 className="text-lg sm:text-xl text-white">Audio Segment Builder</h3>
+                <p className="text-xs sm:text-sm text-neutral-400">
                   Select target duration to generate audio segments
                 </p>
               </div>
@@ -189,12 +189,12 @@ export function BatchBuilder({ totalChunks, onBack, onSubmitBatches }: BatchBuil
         </div>
 
         {/* Target Duration Control */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6">
+        <div className="flex-none bg-neutral-900/40 backdrop-blur-xl border-b border-white/10 p-4 sm:p-6">
           <div className="max-w-4xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div>
-                <Label className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-purple-600" strokeWidth={2.5} />
+                <Label className="flex items-center gap-2 text-neutral-300">
+                  <Clock className="w-4 h-4 text-purple-400" strokeWidth={2.5} />
                   Target Audio Duration
                 </Label>
                 <p className="text-xs text-neutral-500 mt-1">
@@ -202,10 +202,10 @@ export function BatchBuilder({ totalChunks, onBack, onSubmitBatches }: BatchBuil
                 </p>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl tabular-nums text-purple-700">
+                <span className="text-3xl sm:text-4xl tabular-nums text-purple-400">
                   {targetMinutes}
                 </span>
-                <span className="text-lg text-neutral-600">minutes</span>
+                <span className="text-lg text-neutral-400">minutes</span>
               </div>
             </div>
             

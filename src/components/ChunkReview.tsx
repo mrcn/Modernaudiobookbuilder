@@ -1,28 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ArrowLeft, Zap, Search, CheckSquare, Square, RotateCcw, ArrowRight, Settings, Sparkles, BookOpen, ChevronDown, ChevronUp, Pause, Play, X } from "lucide-react";
-import { Input } from "./ui/input";
+import { ArrowLeft, ArrowRight, Settings, Clock, FileAudio, Zap, Mic2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { ScrollArea } from "./ui/scroll-area";
-import { Textarea } from "./ui/textarea";
+import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
 import { Separator } from "./ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "./ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 export type Chunk = {
   id: number;
@@ -100,10 +83,15 @@ const generateMockChunks = (): Chunk[] => {
     const tokenCount = Math.round(wordCount * 1.3);
     const estimatedCost = (tokenCount / 1000) * 0.09 + (charCount / 1000000) * 15;
 
-    const isCompleted = index >= 25;
-    const modernizedText = isCompleted 
-      ? text.replace(/shall/g, "will").replace(/whilst/g, "while").replace(/ought to/g, "should")
-      : "";
+    // For demo: mark all as completed with modernized text
+    const modernizedText = text
+      .replace(/shall/g, "will")
+      .replace(/whilst/g, "while")
+      .replace(/ought to/g, "should")
+      .replace(/replied he/g, "he replied")
+      .replace(/returned she/g, "she returned")
+      .replace(/cried his wife/g, "his wife cried")
+      .replace(/said his lady/g, "his wife said");
 
     return {
       id: index,
@@ -115,10 +103,8 @@ const generateMockChunks = (): Chunk[] => {
       estimatedCost,
       edited: false,
       flagged: false,
-      status: isCompleted ? "completed" : (index === 15 ? "failed" : "pending"),
-      modernizationInstructions: isCompleted 
-        ? "Modern, casual, conversational tone. Update archaic language while preserving the original meaning and literary style."
-        : undefined,
+      status: "completed",
+      modernizationInstructions: "Modern, casual, conversational tone. Update archaic language while preserving the original meaning and literary style.",
     };
   });
 };
@@ -131,733 +117,552 @@ export function ChunkReview({
   onModernizeChunks,
   onRegenerateChunk,
 }: ChunkReviewProps) {
-  const [chunks, setChunks] = useState<Chunk[]>(providedChunks || []);
-  
-  useEffect(() => {
-    if (providedChunks) {
-      setChunks(providedChunks);
-    }
-  }, [providedChunks]);
-  
-  const [selectedChunkIds, setSelectedChunkIds] = useState<Set<number>>(new Set());
-  const [expandedChunkId, setExpandedChunkId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [modernizationInstructions, setModernizationInstructions] = useState(
-    "Modern, casual, conversational tone. Update archaic language while preserving the original meaning and literary style."
-  );
-  const [regenerateInstructions, setRegenerateInstructions] = useState("");
-  const [showSegmentConfig, setShowSegmentConfig] = useState(false);
-  const [targetSegmentDuration, setTargetSegmentDuration] = useState(60);
-
-  // Modernization process control
-  const [isModernizing, setIsModernizing] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentProcessingIndex, setCurrentProcessingIndex] = useState(0);
-  const modernizationQueueRef = useRef<number[]>([]);
-  const modernizationTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Filter chunks
-  const filteredChunks = useMemo(() => {
-    let result = chunks;
-
-    if (filterStatus === "pending") {
-      result = result.filter(c => c.status === "pending");
-    } else if (filterStatus === "completed") {
-      result = result.filter(c => c.status === "completed");
-    } else if (filterStatus === "failed") {
-      result = result.filter(c => c.status === "failed");
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(c => 
-        c.originalText.toLowerCase().includes(query) ||
-        c.modernizedText.toLowerCase().includes(query)
-      );
-    }
-
-    return result;
-  }, [chunks, filterStatus, searchQuery]);
-
-  // Calculate stats
-  const stats = useMemo(() => {
-    const selectedChunks = chunks.filter(c => selectedChunkIds.has(c.id));
-    const pendingSelectedChunks = selectedChunks.filter(c => c.status === "pending");
-    const pendingTokens = pendingSelectedChunks.reduce((sum, c) => sum + c.tokenCount, 0);
-    const modernizationCost = (pendingTokens / 1000) * 0.09;
-    
-    return {
-      totalPending: chunks.filter(c => c.status === "pending").length,
-      totalCompleted: chunks.filter(c => c.status === "completed").length,
-      totalFailed: chunks.filter(c => c.status === "failed").length,
-      selectedCount: selectedChunkIds.size,
-      selectedPending: pendingSelectedChunks.length,
-      modernizationCost,
-    };
-  }, [chunks, selectedChunkIds]);
-
-  const handleChunkSelect = (chunkId: number) => {
-    const newSelection = new Set(selectedChunkIds);
-    if (newSelection.has(chunkId)) {
-      newSelection.delete(chunkId);
-    } else {
-      newSelection.add(chunkId);
-    }
-    setSelectedChunkIds(newSelection);
-  };
-
-  const handleToggleExpand = (chunkId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedChunkId(expandedChunkId === chunkId ? null : chunkId);
-  };
-
-  const handleSelectAll = () => {
-    setSelectedChunkIds(new Set(filteredChunks.map(c => c.id)));
-  };
-
-  const handleSelectNone = () => {
-    setSelectedChunkIds(new Set());
-  };
-
-  // Process one chunk at a time
-  const processNextChunk = () => {
-    if (modernizationQueueRef.current.length === 0) {
-      setIsModernizing(false);
-      setCurrentProcessingIndex(0);
-      return;
-    }
-
-    const chunkId = modernizationQueueRef.current[0];
-    
-    setChunks(prev => prev.map(chunk => 
-      chunk.id === chunkId
-        ? { ...chunk, status: "processing" as const }
-        : chunk
-    ));
-
-    modernizationTimerRef.current = setTimeout(() => {
-      setChunks(prev => prev.map(chunk => {
-        if (chunk.id === chunkId) {
+  const [chunks, setChunks] = useState<Chunk[]>(() => {
+    if (providedChunks && providedChunks.length > 0) {
+      // If real chunks are provided, modernize the first 3 as examples
+      return providedChunks.map((chunk, index) => {
+        if (index < 3 && chunk.originalText) {
+          // Create sample modernized version for first 3 chunks
           const modernized = chunk.originalText
+            .replace(/eBook/g, "ebook")
             .replace(/shall/g, "will")
             .replace(/whilst/g, "while")
             .replace(/ought to/g, "should")
             .replace(/hath/g, "has")
-            .replace(/doth/g, "does");
+            .replace(/doth/g, "does")
+            .replace(/thou/g, "you")
+            .replace(/thee/g, "you")
+            .replace(/thy/g, "your")
+            .replace(/thine/g, "yours");
           
           return {
             ...chunk,
-            status: "completed" as const,
             modernizedText: modernized,
-            modernizationInstructions,
+            status: "completed" as const,
           };
         }
         return chunk;
-      }));
-
-      modernizationQueueRef.current.shift();
-      setCurrentProcessingIndex(prev => prev + 1);
-      
-      if (!isPaused) {
-        processNextChunk();
-      }
-    }, 2000);
-  };
-
-  const handleModernize = () => {
-    const selectedIds = Array.from(selectedChunkIds);
-    const pendingIds = selectedIds.filter(id => {
-      const chunk = chunks.find(c => c.id === id);
-      return chunk && chunk.status === "pending";
-    });
-
-    if (pendingIds.length === 0) return;
-
-    modernizationQueueRef.current = pendingIds;
-    setIsModernizing(true);
-    setIsPaused(false);
-    setCurrentProcessingIndex(0);
-    processNextChunk();
-  };
-
-  const handlePauseResume = () => {
-    if (isPaused) {
-      // Resume
-      setIsPaused(false);
-      processNextChunk();
-    } else {
-      // Pause
-      setIsPaused(true);
-      if (modernizationTimerRef.current) {
-        clearTimeout(modernizationTimerRef.current);
-      }
+      });
     }
-  };
-
-  const handleStop = () => {
-    setIsModernizing(false);
-    setIsPaused(false);
-    setCurrentProcessingIndex(0);
-    modernizationQueueRef.current = [];
-    
-    if (modernizationTimerRef.current) {
-      clearTimeout(modernizationTimerRef.current);
-    }
-
-    // Reset any processing chunks back to pending
-    setChunks(prev => prev.map(chunk => 
-      chunk.status === "processing"
-        ? { ...chunk, status: "pending" as const }
-        : chunk
-    ));
-  };
-
-  const handleRegenerateChunk = (chunkId: number) => {
-    const instructions = regenerateInstructions || modernizationInstructions;
-    
-    setChunks(prev => prev.map(chunk =>
-      chunk.id === chunkId
-        ? { ...chunk, status: "processing" as const }
-        : chunk
-    ));
-
-    setTimeout(() => {
-      setChunks(prev => prev.map(chunk => {
-        if (chunk.id === chunkId) {
+    return generateMockChunks();
+  });
+  
+  useEffect(() => {
+    if (providedChunks && providedChunks.length > 0) {
+      // Update with sample modernization for first 3
+      const updated = providedChunks.map((chunk, index) => {
+        if (index < 3 && chunk.originalText) {
           const modernized = chunk.originalText
+            .replace(/eBook/g, "ebook")
             .replace(/shall/g, "will")
             .replace(/whilst/g, "while")
-            .replace(/ought to/g, "should");
+            .replace(/ought to/g, "should")
+            .replace(/hath/g, "has")
+            .replace(/doth/g, "does")
+            .replace(/thou/g, "you")
+            .replace(/thee/g, "you")
+            .replace(/thy/g, "your")
+            .replace(/thine/g, "yours");
           
           return {
             ...chunk,
+            modernizedText: modernized,
             status: "completed" as const,
-            modernizedText: modernized + " [Regenerated]",
-            modernizationInstructions: instructions,
           };
         }
         return chunk;
-      }));
-      setRegenerateInstructions("");
-    }, 1500);
-  };
-
-  const canProceedToSegments = chunks.some(c => c.status === "completed");
-
-  const segmentConfig = useMemo(() => {
-    const completedChunks = chunks.filter(c => c.status === "completed");
-    
-    if (completedChunks.length === 0) {
-      return {
-        chunksPerSegment: 0,
-        totalSegments: 0,
-        avgChunkDuration: 0,
-        totalDuration: 0,
-      };
+      });
+      setChunks(updated);
     }
+  }, [providedChunks]);
 
-    const totalWords = completedChunks.reduce((sum, c) => sum + c.wordCount, 0);
-    const avgWordsPerChunk = totalWords / completedChunks.length;
-    const avgChunkDuration = (avgWordsPerChunk / 150) * 60;
-    const chunksPerSegment = Math.max(1, Math.round(targetSegmentDuration / avgChunkDuration));
-    const totalSegments = Math.ceil(completedChunks.length / chunksPerSegment);
-    const totalDuration = (totalWords / 150) * 60;
+  // Duration controls
+  const [targetSegmentMinutes, setTargetSegmentMinutes] = useState(15); // Default: 15 minute segments
+  const [wordsPerMinute, setWordsPerMinute] = useState(150); // Standard audiobook narration rate
+  
+  // Voice settings state
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("alloy");
+  const [pitch, setPitch] = useState(1.0);
+  const [stability, setStability] = useState(0.75);
+  const [pauseLength, setPauseLength] = useState(1.0);
+
+  // Show ALL chunks (with original text at minimum)
+  const visibleChunks = useMemo(() => 
+    chunks.filter(c => c.originalText && c.originalText.trim().length > 0),
+    [chunks]
+  );
+
+  // Calculate duration-based stats
+  const durationStats = useMemo(() => {
+    const totalWords = visibleChunks.reduce((sum, c) => sum + c.wordCount, 0);
+    const totalChars = visibleChunks.reduce((sum, c) => sum + c.charCount, 0);
+    const completedCount = visibleChunks.filter(c => c.status === "completed" && c.modernizedText).length;
+    
+    // Calculate total duration in minutes
+    const totalDurationMinutes = totalWords / wordsPerMinute;
+    const totalDurationHours = totalDurationMinutes / 60;
+    
+    // Calculate how many segments needed
+    const segmentsNeeded = Math.ceil(totalDurationMinutes / targetSegmentMinutes);
+    
+    // Calculate words per segment
+    const wordsPerSegment = Math.ceil(totalWords / segmentsNeeded);
     
     return {
-      chunksPerSegment,
-      totalSegments,
-      avgChunkDuration,
-      totalDuration,
-      completedCount: completedChunks.length,
+      totalChunks: visibleChunks.length,
+      totalWords,
+      totalChars,
+      completedCount,
+      pendingCount: visibleChunks.length - completedCount,
+      totalDurationMinutes,
+      totalDurationHours,
+      segmentsNeeded,
+      wordsPerSegment,
+      targetSegmentMinutes,
+      wordsPerMinute,
     };
-  }, [chunks, targetSegmentDuration]);
+  }, [visibleChunks, targetSegmentMinutes, wordsPerMinute]);
 
-  const handleProceedClick = () => {
-    setShowSegmentConfig(true);
+  // Refs for scroll sync
+  const leftScrollRef = useRef<HTMLDivElement>(null);
+  const rightScrollRef = useRef<HTMLDivElement>(null);
+  const [activePane, setActivePane] = useState<'left' | 'right' | null>(null);
+
+  // Sync scrolling between panes
+  const handleScroll = (pane: 'left' | 'right') => (e: React.UIEvent<HTMLDivElement>) => {
+    if (activePane !== pane) return;
+    
+    const source = e.currentTarget;
+    const target = pane === 'left' ? rightScrollRef.current : leftScrollRef.current;
+    
+    if (target) {
+      const scrollPercentage = source.scrollTop / (source.scrollHeight - source.clientHeight);
+      target.scrollTop = scrollPercentage * (target.scrollHeight - target.clientHeight);
+    }
   };
 
-  const handleConfirmProceed = () => {
-    setShowSegmentConfig(false);
-    onProceedToSegmentBuilder(segmentConfig.chunksPerSegment);
-  };
-
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.round(seconds % 60);
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
     
     if (hours > 0) {
       return `${hours}h ${mins}m`;
     }
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
+    return `${mins}m`;
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-50 via-purple-50/30 to-pink-50/30">
-      {/* Segment Configuration Dialog */}
-      <Dialog open={showSegmentConfig} onOpenChange={setShowSegmentConfig}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
-              Configure Audio Segments
-            </DialogTitle>
-            <DialogDescription>
-              Set your preferred segment duration and we'll calculate the optimal grouping
-            </DialogDescription>
-          </DialogHeader>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 relative overflow-hidden">
+      {/* Vignette Overlay - Edge Burn Effect */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-10"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0.6) 100%)'
+        }}
+      />
 
-          <div className="space-y-6 py-4">
-            {/* INPUT: Target Duration */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-200 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">1</div>
-                <Label className="text-sm text-blue-900">Target Segment Duration</Label>
-              </div>
-              
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs text-blue-700">How long should each audio segment be?</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl tabular-nums text-blue-900">{targetSegmentDuration < 60 ? targetSegmentDuration : ''}</span>
-                  {targetSegmentDuration < 60 && <span className="text-sm text-blue-700">seconds</span>}
-                  {targetSegmentDuration >= 60 && <span className="text-2xl tabular-nums text-blue-900">{formatTime(targetSegmentDuration)}</span>}
-                </div>
-              </div>
-              
-              <Slider
-                value={[targetSegmentDuration]}
-                min={15}
-                max={10800}
-                step={15}
-                onValueChange={(value) => setTargetSegmentDuration(value[0])}
-                className="mb-3"
-              />
-              
-              <div className="flex items-center justify-between text-xs text-blue-600">
-                <span>15s (min)</span>
-                <span>{formatTime(targetSegmentDuration)}</span>
-                <span>3h (max)</span>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* OUTPUT: Calculated Results */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs">2</div>
-                <h5 className="text-sm text-purple-900">Calculated Grouping</h5>
-              </div>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-neutral-600">Available Chunks</span>
-                  <span className="tabular-nums text-neutral-900 px-2 py-1 bg-white rounded border border-purple-200">
-                    {segmentConfig.completedCount || stats.totalCompleted}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-neutral-600">Chunks per Segment</span>
-                  <span className="tabular-nums text-purple-700 px-2 py-1 bg-white rounded border border-purple-200">
-                    ~{segmentConfig.chunksPerSegment}
-                  </span>
-                </div>
-                
-                <Separator className="bg-purple-200" />
-                
-                <div className="flex justify-between items-center pt-1">
-                  <span className="text-purple-700">Total Segments</span>
-                  <span className="text-lg tabular-nums text-purple-900 px-3 py-1 bg-white rounded border-2 border-purple-300">
-                    {segmentConfig.totalSegments}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* SUMMARY */}
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border border-emerald-200 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">3</div>
-                <h5 className="text-sm text-emerald-900">Summary</h5>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-neutral-600">Target per Segment</span>
-                  <span className="tabular-nums text-emerald-900">{formatTime(targetSegmentDuration)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-600">Total Audio Duration</span>
-                  <span className="tabular-nums text-emerald-900">{formatTime(segmentConfig.totalDuration)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-600">Avg Actual Duration</span>
-                  <span className="tabular-nums text-emerald-900">
-                    {segmentConfig.totalSegments > 0 
-                      ? formatTime(segmentConfig.totalDuration / segmentConfig.totalSegments)
-                      : "0s"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-amber-50 rounded-lg border border-amber-200 p-3">
-              <p className="text-xs text-amber-800">
-                <strong>Note:</strong> Actual segment durations may vary slightly based on natural chunk boundaries. 
-                Each segment will contain approximately {segmentConfig.chunksPerSegment} chunk{segmentConfig.chunksPerSegment !== 1 ? 's' : ''}.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSegmentConfig(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleConfirmProceed}
-              disabled={segmentConfig.totalSegments === 0}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-            >
-              <ArrowRight className="w-4 h-4 mr-2" strokeWidth={2.5} />
-              Create {segmentConfig.totalSegments} Segment{segmentConfig.totalSegments !== 1 ? 's' : ''}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Ambient background */}
+      {/* Subtle ambient background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 h-full flex flex-col">
-        {/* UNIFIED TOOLBAR - Everything in ONE compact row */}
-        <div className="flex-none bg-white/80 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-2.5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            {/* Left: Back + Title */}
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={onBack}
-                className="flex-shrink-0 p-2 hover:bg-black/5 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-purple-600 flex-shrink-0" strokeWidth={2.5} />
-                  <h3 className="text-base sm:text-lg truncate">Text Transformation</h3>
+      <div className="relative z-20 h-full flex flex-col">
+        {/* Header with Duration Controls */}
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/5">
+          {/* Top Bar */}
+          <div className="px-6 py-4 border-b border-white/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={onBack}
+                  className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white"
+                >
+                  <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
+                </button>
+                <div>
+                  <h3 className="text-lg text-white">Text Transformation</h3>
+                  <p className="text-sm text-neutral-400">
+                    {durationStats.totalWords.toLocaleString()} words • {formatDuration(durationStats.totalDurationMinutes)} total
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Center: Search + Filter + Stats */}
-            <div className="flex items-center gap-2 flex-1 max-w-2xl">
-              {/* Search */}
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" strokeWidth={2.5} />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search..."
-                  className="pl-8 h-8 text-sm"
-                />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  <Settings className="w-4 h-4 mr-2" strokeWidth={2.5} />
+                  Settings
+                </Button>
+                <button
+                  onClick={() => onProceedToSegmentBuilder(Math.ceil(visibleChunks.length / durationStats.segmentsNeeded))}
+                  className="group relative px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/25 hover:scale-105"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Continue to Audio
+                    <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                  </span>
+                </button>
               </div>
-              
-              {/* Filter */}
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-28 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="completed">Done</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              {/* Compact Stats */}
-              <div className="flex items-center gap-2 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-neutral-600 tabular-nums">{stats.totalCompleted}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span className="text-neutral-600 tabular-nums">{stats.totalPending}</span>
-                </div>
-                {stats.selectedCount > 0 && (
-                  <>
-                    <Separator orientation="vertical" className="h-3" />
-                    <div className="flex items-center gap-1">
-                      <CheckSquare className="w-3 h-3 text-purple-600" strokeWidth={2.5} />
-                      <span className="text-purple-700 tabular-nums">{stats.selectedCount}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Select All/Clear */}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  className="h-7 px-2 text-xs"
-                >
-                  All
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSelectNone}
-                  className="h-7 px-2 text-xs"
-                >
-                  Clear
-                </Button>
-              </div>
-            </div>
-
-            {/* Right: Modernization Controls + Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Modernization Progress/Controls */}
-              {isModernizing && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                    <span className="text-xs text-blue-700 tabular-nums">
-                      {currentProcessingIndex}/{modernizationQueueRef.current.length + currentProcessingIndex}
-                    </span>
-                  </div>
-                  
-                  <Separator orientation="vertical" className="h-4" />
-                  
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={handlePauseResume}
-                      className="p-1 hover:bg-blue-100 rounded transition-colors"
-                      title={isPaused ? "Resume" : "Pause"}
-                    >
-                      {isPaused ? (
-                        <Play className="w-3.5 h-3.5 text-blue-700" strokeWidth={2.5} />
-                      ) : (
-                        <Pause className="w-3.5 h-3.5 text-blue-700" strokeWidth={2.5} />
-                      )}
-                    </button>
-                    <button
-                      onClick={handleStop}
-                      className="p-1 hover:bg-red-100 rounded transition-colors"
-                      title="Stop"
-                    >
-                      <X className="w-3.5 h-3.5 text-red-600" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Modernize Button */}
-              {!isModernizing && stats.selectedPending > 0 && (
-                <Button
-                  onClick={handleModernize}
-                  size="sm"
-                  className="h-8 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white gap-1.5"
-                >
-                  <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  <span className="text-xs">Modernize {stats.selectedPending}</span>
-                </Button>
-              )}
-              
-              {/* Create Audio Button */}
-              {canProceedToSegments && (
-                <Button
-                  onClick={handleProceedClick}
-                  size="sm"
-                  className="h-8 px-4 bg-emerald-600 text-white gap-1.5"
-                >
-                  <span className="text-xs">Create Audio</span>
-                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
-                </Button>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Main Content - Side by Side Text */}
-        <ScrollArea className="flex-1">
-          <div className="p-6 space-y-4 max-w-7xl mx-auto">
-            {filteredChunks.map((chunk) => {
-              const isSelected = selectedChunkIds.has(chunk.id);
-              const isExpanded = expandedChunkId === chunk.id;
-              const isCompleted = chunk.status === "completed";
-              
-              return (
-                <div 
-                  key={chunk.id}
-                  className={`group relative bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
-                    isSelected
-                      ? "border-purple-300 shadow-lg shadow-purple-500/10"
-                      : "border-black/5 hover:border-purple-200 hover:shadow-md"
-                  }`}
-                >
-                  {/* Selection indicator */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${
-                    isSelected ? "bg-gradient-to-b from-purple-600 to-pink-600" : "bg-transparent"
-                  }`} />
+          {/* Duration Control Panel */}
+          <div className="px-6 py-4 bg-neutral-950/40">
+            <div className="grid grid-cols-2 gap-6 max-w-5xl">
+              {/* Left Column: Target Segment Duration */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs uppercase tracking-wider text-neutral-400 flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    Target Segment Length
+                  </Label>
+                  <span className="text-sm tabular-nums text-white">
+                    {targetSegmentMinutes} min
+                  </span>
+                </div>
+                <Slider
+                  value={[targetSegmentMinutes]}
+                  onValueChange={([value]) => setTargetSegmentMinutes(value)}
+                  min={5}
+                  max={60}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-neutral-500">
+                  How long should each audio file be?
+                </p>
+              </div>
 
-                  {/* Main Content */}
-                  <div className="pl-6 pr-4 py-5">
-                    <div className="flex items-start gap-4">
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => handleChunkSelect(chunk.id)}
-                        className="flex-shrink-0 mt-1 p-1 hover:bg-purple-50 rounded transition-colors"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
-                        ) : (
-                          <Square className="w-5 h-5 text-neutral-300 group-hover:text-purple-400" strokeWidth={2.5} />
-                        )}
-                      </button>
+              {/* Right Column: Output Summary */}
+              <div className="bg-gradient-to-br from-purple-950/50 to-pink-950/50 rounded-xl p-4 border border-purple-500/20">
+                <div className="flex items-start justify-between mb-3">
+                  <Label className="text-xs uppercase tracking-wider text-purple-300">
+                    Audio Output
+                  </Label>
+                  <FileAudio className="w-4 h-4 text-purple-400" strokeWidth={2.5} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl tabular-nums text-white">
+                      {durationStats.segmentsNeeded}
+                    </span>
+                    <span className="text-sm text-purple-300">audio files</span>
+                  </div>
+                  <div className="text-xs text-neutral-400 space-y-1">
+                    <div>≈ {durationStats.wordsPerSegment.toLocaleString()} words each</div>
+                    <div>≈ {formatDuration(targetSegmentMinutes)} per file</div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                      {/* Text Content */}
-                      <div className="flex-1 min-w-0">
-                        {/* Status Badge */}
-                        <div className="flex items-center gap-2 mb-3">
-                          {chunk.status === "completed" && (
-                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
-                              <Sparkles className="w-3 h-3" strokeWidth={2.5} />
-                              <span className="text-xs">Modernized</span>
-                            </div>
-                          )}
-                          {chunk.status === "pending" && (
-                            <div className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">
-                              Pending
-                            </div>
-                          )}
-                          {chunk.status === "processing" && (
-                            <div className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs animate-pulse">
-                              Processing...
-                            </div>
-                          )}
-                          {chunk.status === "failed" && (
-                            <div className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
-                              Failed
-                            </div>
-                          )}
+            {/* Voice & Reading Settings - Collapsible */}
+            <div className="mt-4 max-w-5xl">
+              <Collapsible open={voiceSettingsOpen} onOpenChange={setVoiceSettingsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-neutral-900/40 hover:bg-neutral-900/60 rounded-xl border border-white/10 transition-all group">
+                  <div className="flex items-center gap-2">
+                    <Mic2 className="w-4 h-4 text-purple-400" strokeWidth={2.5} />
+                    <span className="text-sm text-neutral-300">Voice & Reading Settings</span>
+                    <span className="text-xs text-neutral-500">({wordsPerMinute} wpm, {selectedVoice} voice)</span>
+                  </div>
+                  {voiceSettingsOpen ? (
+                    <ChevronUp className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" strokeWidth={2.5} />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" strokeWidth={2.5} />
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3">
+                  <div className="bg-neutral-900/40 rounded-xl border border-white/10 p-4">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Speaking Rate */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs uppercase tracking-wider text-neutral-400 flex items-center gap-2">
+                            <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            Speaking Rate
+                          </Label>
+                          <span className="text-sm tabular-nums text-white">
+                            {wordsPerMinute} wpm
+                          </span>
                         </div>
+                        <Slider
+                          value={[wordsPerMinute]}
+                          onValueChange={([value]) => setWordsPerMinute(value)}
+                          min={120}
+                          max={180}
+                          step={5}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-neutral-500">
+                          Standard audiobook: 150-160 wpm
+                        </p>
+                      </div>
 
-                        {/* Side by Side Text */}
-                        <div className={`grid gap-6 ${isCompleted ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                          {/* Original Text */}
-                          <div>
-                            {isCompleted && (
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1 h-4 bg-neutral-300 rounded-full" />
-                                <span className="text-xs text-neutral-500 uppercase tracking-wide">Original</span>
-                              </div>
-                            )}
-                            <p className="text-base leading-relaxed text-neutral-700">
-                              {chunk.originalText}
-                            </p>
-                          </div>
-
-                          {/* Modernized Text */}
-                          {isCompleted && chunk.modernizedText && (
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1 h-4 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
-                                <span className="text-xs text-purple-700 uppercase tracking-wide">TTS-Ready</span>
-                              </div>
-                              <div className="bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-lg p-3 border border-purple-200/50">
-                                <p className="text-base leading-relaxed text-purple-900">
-                                  {chunk.modernizedText}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Expand for Tools */}
-                        {isCompleted && (
-                          <div className="mt-4">
+                      {/* Voice Selection */}
+                      <div className="space-y-3">
+                        <Label className="text-xs uppercase tracking-wider text-neutral-400">
+                          Voice
+                        </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {["alloy", "echo", "nova"].map((voice) => (
                             <button
-                              onClick={(e) => handleToggleExpand(chunk.id, e)}
-                              className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 transition-colors"
+                              key={voice}
+                              onClick={() => setSelectedVoice(voice)}
+                              className={`px-3 py-2 rounded-lg text-xs transition-all ${
+                                selectedVoice === voice
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white"
+                              }`}
                             >
-                              {isExpanded ? (
-                                <>
-                                  <ChevronUp className="w-4 h-4" strokeWidth={2.5} />
-                                  <span>Hide Tools</span>
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
-                                  <span>Edit & Regenerate</span>
-                                </>
-                              )}
+                              {voice}
                             </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-neutral-500">
+                          Choose narrator voice style
+                        </p>
+                      </div>
 
-                            {isExpanded && (
-                              <div className="mt-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200 space-y-3">
-                                <div>
-                                  <Label className="text-xs text-neutral-600 mb-2 block">
-                                    Custom regeneration instructions (optional)
-                                  </Label>
-                                  <Textarea
-                                    value={regenerateInstructions}
-                                    onChange={(e) => setRegenerateInstructions(e.target.value)}
-                                    placeholder={modernizationInstructions}
-                                    className="min-h-[60px] text-sm resize-none"
-                                  />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-neutral-500">
-                                    Leave empty to use default instructions
-                                  </p>
-                                  <Button
-                                    onClick={() => handleRegenerateChunk(chunk.id)}
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-2"
-                                  >
-                                    <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                    Regenerate
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      {/* Pitch */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs uppercase tracking-wider text-neutral-400">
+                            Pitch
+                          </Label>
+                          <span className="text-sm tabular-nums text-white">
+                            {pitch.toFixed(2)}x
+                          </span>
+                        </div>
+                        <Slider
+                          value={[pitch]}
+                          onValueChange={([value]) => setPitch(value)}
+                          min={0.8}
+                          max={1.2}
+                          step={0.05}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-neutral-500">
+                          Voice pitch adjustment
+                        </p>
+                      </div>
+
+                      {/* Stability */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs uppercase tracking-wider text-neutral-400">
+                            Stability
+                          </Label>
+                          <span className="text-sm tabular-nums text-white">
+                            {(stability * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <Slider
+                          value={[stability]}
+                          onValueChange={([value]) => setStability(value)}
+                          min={0.5}
+                          max={1.0}
+                          step={0.05}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-neutral-500">
+                          Voice consistency & emotion range
+                        </p>
+                      </div>
+
+                      {/* Pause Length */}
+                      <div className="space-y-3 col-span-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs uppercase tracking-wider text-neutral-400">
+                            Pause Length
+                          </Label>
+                          <span className="text-sm tabular-nums text-white">
+                            {pauseLength.toFixed(1)}x
+                          </span>
+                        </div>
+                        <Slider
+                          value={[pauseLength]}
+                          onValueChange={([value]) => setPauseLength(value)}
+                          min={0.5}
+                          max={2.0}
+                          step={0.1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-neutral-500">
+                          Duration of pauses between sentences and paragraphs
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        {/* Bottom Settings Bar - Modernization Instructions */}
-        <div className="flex-none bg-white/90 backdrop-blur-xl border-t border-black/5 px-6 py-3">
-          <div className="flex items-center gap-3">
-            <Label className="text-xs text-neutral-600 whitespace-nowrap flex-shrink-0">
-              Default Instructions:
-            </Label>
-            <Textarea
-              value={modernizationInstructions}
-              onChange={(e) => setModernizationInstructions(e.target.value)}
-              placeholder="Describe how you want text modernized..."
-              className="flex-1 min-h-[50px] text-sm resize-none"
-            />
+        {/* Dual Pane Reading View */}
+        <div className="flex-1 grid grid-cols-2 gap-0 min-h-0">
+          {/* Left Pane - Original Text */}
+          <div className="flex flex-col border-r border-white/5 bg-neutral-900/40 backdrop-blur-sm min-h-0">
+            <div className="flex-none px-8 py-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-neutral-500 rounded-full" />
+                <h4 className="text-sm uppercase tracking-wider text-neutral-400">Original Text</h4>
+              </div>
+            </div>
+            
+            <div 
+              ref={leftScrollRef}
+              onScroll={handleScroll('left')}
+              onMouseEnter={() => setActivePane('left')}
+              className="flex-1 overflow-y-scroll overflow-x-hidden min-h-0"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent'
+              }}
+            >
+              <div className="px-8 py-12">
+                <div className="max-w-3xl mx-auto">
+                  {visibleChunks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-neutral-500 text-sm">No text chunks available</p>
+                      <p className="text-neutral-600 text-xs mt-2">Upload and chunk a document to see text here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {visibleChunks.map((chunk, index) => (
+                        <div 
+                          key={`original-${chunk.id}`}
+                          className="relative"
+                        >
+                          {/* Chunk separator */}
+                          {index > 0 && (
+                            <div className="absolute -top-4 left-0 right-0 flex items-center gap-3">
+                              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                            </div>
+                          )}
+                          
+                          <pre 
+                            className="text-base leading-relaxed text-neutral-300 whitespace-pre-wrap break-words font-sans"
+                          >
+                            {chunk.originalText}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Pane - Modernized Text */}
+          <div className="flex flex-col bg-gradient-to-br from-purple-950/30 to-pink-950/30 backdrop-blur-sm min-h-0">
+            <div className="flex-none px-8 py-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
+                <h4 className="text-sm uppercase tracking-wider text-purple-300">Modernized Text</h4>
+              </div>
+            </div>
+            
+            <div 
+              ref={rightScrollRef}
+              onScroll={handleScroll('right')}
+              onMouseEnter={() => setActivePane('right')}
+              className="flex-1 overflow-y-scroll overflow-x-hidden min-h-0"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(168,85,247,0.3) transparent'
+              }}
+            >
+              <div className="px-8 py-12">
+                <div className="max-w-3xl mx-auto">
+                  {visibleChunks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-purple-400 text-sm">No modernized text yet</p>
+                      <p className="text-neutral-600 text-xs mt-2">Process chunks to see modernized versions</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {visibleChunks.map((chunk, index) => (
+                        <div 
+                          key={`modern-${chunk.id}`}
+                          className="relative"
+                        >
+                          {/* Chunk separator */}
+                          {index > 0 && (
+                            <div className="absolute -top-4 left-0 right-0 flex items-center gap-3">
+                              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+                            </div>
+                          )}
+                          
+                          {chunk.modernizedText && chunk.modernizedText.trim().length > 0 ? (
+                            <pre 
+                              className="text-base leading-relaxed text-white whitespace-pre-wrap break-words font-sans"
+                            >
+                              {chunk.modernizedText}
+                            </pre>
+                          ) : (
+                            <div className="text-base leading-relaxed text-neutral-600 italic border border-dashed border-neutral-700 rounded-lg p-6 bg-neutral-900/30">
+                              <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Pending Modernization</p>
+                              <p className="text-sm">This segment hasn't been modernized yet...</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Status Bar */}
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-t border-white/5 px-6 py-3">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-4 text-neutral-500">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>{durationStats.completedCount} modernized</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>{durationStats.pendingCount} pending</span>
+              </div>
+              <Separator orientation="vertical" className="h-3" />
+              <span className="text-neutral-600">
+                {formatDuration(durationStats.totalDurationMinutes)} at {durationStats.wordsPerMinute} wpm
+              </span>
+            </div>
+            <p className="text-neutral-500">
+              Scroll either pane to compare original and modernized text side by side
+            </p>
           </div>
         </div>
       </div>
+
+      <style>{`
+        /* Custom scrollbar styling */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
     </div>
   );
 }

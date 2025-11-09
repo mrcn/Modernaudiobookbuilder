@@ -197,27 +197,27 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
   const currentTrack = audioTracks.find(t => t.id === currentlyPlayingId);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-50 via-purple-50/30 to-pink-50/30">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
       {/* Ambient background blur elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 h-full flex flex-col">
         {/* Header */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-4 shadow-sm">
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-black/5 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white"
               >
                 <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
               </button>
               <div>
-                <h3 className="text-lg sm:text-xl">Audio Playlist</h3>
-                <p className="text-xs sm:text-sm text-neutral-600">
+                <h3 className="text-lg sm:text-xl text-white">Audio Playlist</h3>
+                <p className="text-xs sm:text-sm text-neutral-400">
                   {stats.totalTracks} track{stats.totalTracks !== 1 ? 's' : ''} • {formatTime(stats.totalDuration)} total • {formatFileSize(stats.totalSize)}
                 </p>
               </div>
@@ -245,26 +245,26 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
         </div>
 
         {/* Stats Bar */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6">
+        <div className="flex-none bg-neutral-900/40 backdrop-blur-xl border-b border-white/10 p-4 sm:p-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-neutral-600 mb-1">Total Tracks</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{stats.totalTracks}</p>
+            <div className="bg-neutral-900/60 rounded-xl border border-white/10 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+              <p className="text-xs text-neutral-400 mb-1">Total Tracks</p>
+              <p className="text-xl sm:text-2xl tabular-nums text-white">{stats.totalTracks}</p>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-purple-700 mb-1">Total Duration</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-purple-900">{formatTime(stats.totalDuration)}</p>
+            <div className="bg-gradient-to-br from-purple-950/50 to-pink-950/50 rounded-xl border border-purple-500/30 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+              <p className="text-xs text-purple-300 mb-1">Total Duration</p>
+              <p className="text-xl sm:text-2xl tabular-nums text-white">{formatTime(stats.totalDuration)}</p>
             </div>
 
-            <div className="bg-white rounded-xl border border-black/5 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-neutral-600 mb-1">Total Size</p>
-              <p className="text-xl sm:text-2xl tabular-nums text-neutral-900">{formatFileSize(stats.totalSize)}</p>
+            <div className="bg-neutral-900/60 rounded-xl border border-white/10 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+              <p className="text-xs text-neutral-400 mb-1">Total Size</p>
+              <p className="text-xl sm:text-2xl tabular-nums text-white">{formatFileSize(stats.totalSize)}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-3 sm:p-4 shadow-sm">
-              <p className="text-xs text-emerald-700 mb-1">Now Playing</p>
-              <p className="text-base sm:text-lg text-emerald-900">
+            <div className="bg-gradient-to-br from-emerald-950/50 to-green-950/50 rounded-xl border border-emerald-500/30 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+              <p className="text-xs text-emerald-300 mb-1">Now Playing</p>
+              <p className="text-base sm:text-lg text-white">
                 {currentTrack ? `Track ${currentTrack.name}` : 'None'}
               </p>
             </div>
@@ -285,8 +285,8 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                     key={track.id}
                     className={`rounded-xl border p-4 sm:p-6 transition-all ${
                       isCurrentlyPlaying
-                        ? "bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 shadow-lg shadow-purple-200/50"
-                        : "bg-white/80 backdrop-blur-xl border-black/10 hover:border-purple-200 hover:shadow-md"
+                        ? "bg-gradient-to-br from-purple-950/50 to-pink-950/50 border-purple-500/50 shadow-lg shadow-purple-500/20"
+                        : "bg-neutral-900/40 backdrop-blur-xl border-white/10 hover:border-purple-500/30 hover:shadow-md"
                     }`}
                   >
                     {/* Track Header */}
@@ -295,7 +295,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           isCurrentlyPlaying 
                             ? "bg-gradient-to-r from-purple-600 to-pink-600" 
-                            : "bg-gradient-to-r from-neutral-400 to-neutral-500"
+                            : "bg-gradient-to-r from-neutral-700 to-neutral-600"
                         }`}>
                           <span className="text-white">{index + 1}</span>
                         </div>
@@ -331,17 +331,17 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                         ) : (
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="text-base sm:text-lg">Track {track.name}</h4>
+                              <h4 className="text-base sm:text-lg text-white">Track {track.name}</h4>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                                className="h-6 w-6 p-0 opacity-60 hover:opacity-100 text-neutral-400 hover:text-white"
                                 onClick={() => handleRename(track.id)}
                               >
                                 <Edit2 className="w-3 h-3" strokeWidth={2.5} />
                               </Button>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-neutral-600 flex-wrap">
+                            <div className="flex items-center gap-2 text-xs text-neutral-400 flex-wrap">
                               <span>{formatTime(track.duration)}</span>
                               <span>•</span>
                               <span>{formatFileSize(track.fileSize)}</span>
@@ -352,14 +352,14 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                         )}
                       </div>
 
-                      <Badge variant={isCurrentlyPlaying ? "default" : "secondary"} className={isCurrentlyPlaying ? "bg-purple-600" : ""}>
+                      <Badge variant={isCurrentlyPlaying ? "default" : "secondary"} className={isCurrentlyPlaying ? "bg-purple-600" : "bg-neutral-800 text-neutral-300"}>
                         {track.status === "playing" ? "Playing" : track.status === "paused" ? "Paused" : "Ready"}
                       </Badge>
                     </div>
 
                     {/* Track Text */}
-                    <div className="mb-4 p-4 bg-white/50 rounded-lg border border-black/5">
-                      <p className="text-sm leading-relaxed text-neutral-800">
+                    <div className="mb-4 p-4 bg-neutral-950/50 rounded-lg border border-white/10">
+                      <p className="text-sm leading-relaxed text-neutral-300">
                         {track.text}
                       </p>
                     </div>
@@ -368,7 +368,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                     <div className="space-y-3">
                       {/* Waveform / Progress Bar */}
                       <div className="space-y-2">
-                        <div className="h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg overflow-hidden relative cursor-pointer">
+                        <div className="h-16 bg-gradient-to-r from-neutral-800 to-neutral-700 rounded-lg overflow-hidden relative cursor-pointer border border-white/10">
                           {/* Simulated waveform background */}
                           <div className="absolute inset-0 flex items-center justify-around px-1">
                             {Array.from({ length: 80 }).map((_, i) => {
@@ -376,7 +376,7 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                               return (
                                 <div
                                   key={i}
-                                  className="w-0.5 bg-purple-300/50 rounded-full transition-colors"
+                                  className="w-0.5 bg-neutral-500/50 rounded-full transition-colors"
                                   style={{ height: `${height}%` }}
                                 />
                               );
@@ -385,13 +385,13 @@ export function SegmentBuilder({ chunks, chunksPerSegment, onBack, onGenerateAud
                           
                           {/* Progress overlay */}
                           <div 
-                            className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-40 transition-all duration-300"
+                            className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-50 transition-all duration-300"
                             style={{ width: `${progressPercent}%` }}
                           />
                         </div>
 
                         {/* Time display */}
-                        <div className="flex items-center justify-between text-xs text-neutral-600">
+                        <div className="flex items-center justify-between text-xs text-neutral-400">
                           <span className="tabular-nums">{formatTime(progress)}</span>
                           <span className="tabular-nums">{formatTime(track.duration)}</span>
                         </div>

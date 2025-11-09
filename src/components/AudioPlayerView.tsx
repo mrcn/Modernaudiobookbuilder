@@ -128,27 +128,27 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-50 via-purple-50/30 to-pink-50/30">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
       {/* Ambient background blur elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 h-full flex flex-col">
         {/* Top Header */}
-        <div className="flex-none bg-white/70 backdrop-blur-xl border-b border-black/5 px-4 sm:px-6 py-4 shadow-sm">
+        <div className="flex-none bg-neutral-900/80 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-black/5 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white"
               >
                 <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
               </button>
               <div>
-                <h3 className="text-lg sm:text-xl">{book.title}</h3>
-                <p className="text-xs sm:text-sm text-neutral-600">{book.author}</p>
+                <h3 className="text-lg sm:text-xl text-white">{book.title}</h3>
+                <p className="text-xs sm:text-sm text-neutral-400">{book.author}</p>
               </div>
             </div>
 
@@ -179,15 +179,15 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
         {/* Three-Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel: Chunk Navigation */}
-          <div className="w-80 flex flex-col bg-white border-r border-black/5">
-            <div className="flex-none p-4 border-b border-black/5 bg-white/70 backdrop-blur-xl">
+          <div className="w-80 flex flex-col bg-neutral-900/60 border-r border-white/10">
+            <div className="flex-none p-4 border-b border-white/10 bg-neutral-900/40 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm">Chunks</h4>
-                <Badge variant="secondary" className="text-xs">
+                <h4 className="text-sm text-white">Chunks</h4>
+                <Badge variant="secondary" className="text-xs bg-neutral-800 text-neutral-300">
                   {currentSegmentIndex + 1}/{mockSegments.length}
                 </Badge>
               </div>
-              <p className="text-xs text-neutral-600">
+              <p className="text-xs text-neutral-400">
                 {mockSegments.filter((_, i) => i <= currentSegmentIndex).length} of {mockSegments.length} played
               </p>
             </div>
@@ -202,30 +202,30 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                     <div
                       key={segment.id}
                       onClick={() => jumpToSegment(index)}
-                      className={`group border-b border-black/5 px-4 py-3 cursor-pointer transition-all ${
+                      className={`group border-b border-white/5 px-4 py-3 cursor-pointer transition-all ${
                         isCurrent
-                          ? "bg-purple-50 border-l-4 border-l-purple-600"
-                          : "hover:bg-neutral-50 border-l-4 border-l-transparent"
+                          ? "bg-purple-950/50 border-l-4 border-l-purple-500"
+                          : "hover:bg-neutral-800/50 border-l-4 border-l-transparent"
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         {/* Play status indicator */}
                         <div className="flex-shrink-0">
                           {isPlayed ? (
-                            <CheckCircle className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
+                            <CheckCircle className="w-4 h-4 text-emerald-400" strokeWidth={2.5} />
                           ) : isCurrent && isPlaying ? (
-                            <div className="w-4 h-4 rounded-full border-2 border-purple-600 flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                            <div className="w-4 h-4 rounded-full border-2 border-purple-500 flex items-center justify-center">
+                              <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
                             </div>
                           ) : (
-                            <div className="w-4 h-4 rounded-full border-2 border-neutral-300" />
+                            <div className="w-4 h-4 rounded-full border-2 border-neutral-600" />
                           )}
                         </div>
 
                         {/* Chunk info */}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-neutral-500">Chunk #{segment.chunkId}</p>
-                          <p className="text-sm line-clamp-1">{segment.text}</p>
+                          <p className="text-sm line-clamp-1 text-neutral-300">{segment.text}</p>
                           <p className="text-xs text-neutral-500 mt-0.5">
                             {formatTime(segment.duration)}
                           </p>
@@ -238,12 +238,12 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
             </ScrollArea>
 
             {/* Actions */}
-            <div className="flex-none p-4 border-t border-black/5 bg-white/70 backdrop-blur-xl space-y-2">
+            <div className="flex-none p-4 border-t border-white/10 bg-neutral-900/40 backdrop-blur-xl space-y-2">
               {onEditChunk && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
                   onClick={() => onEditChunk(currentSegment.chunkId)}
                 >
                   <Edit className="w-4 h-4" strokeWidth={2.5} />
@@ -254,7 +254,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
                   onClick={() => onRegenerateChunk(currentSegment.chunkId)}
                 >
                   <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
@@ -265,13 +265,13 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
           </div>
 
           {/* Center Panel: Synchronized Text Display */}
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="flex-none px-6 py-4 border-b border-black/5 bg-white/70 backdrop-blur-xl">
+          <div className="flex-1 flex flex-col bg-neutral-950/50">
+            <div className="flex-none px-6 py-4 border-b border-white/10 bg-neutral-900/40 backdrop-blur-xl">
               <Tabs value={textView} onValueChange={(v) => setTextView(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="original">Original</TabsTrigger>
-                  <TabsTrigger value="modernized">Modernized</TabsTrigger>
-                  <TabsTrigger value="sidebyside">Side-by-Side</TabsTrigger>
+                <TabsList className="bg-neutral-800 border-white/10">
+                  <TabsTrigger value="original" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white text-neutral-400">Original</TabsTrigger>
+                  <TabsTrigger value="modernized" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white text-neutral-400">Modernized</TabsTrigger>
+                  <TabsTrigger value="sidebyside" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white text-neutral-400">Side-by-Side</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -280,13 +280,13 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
               {textView === "sidebyside" ? (
                 <div className="h-full flex">
                   {/* Original */}
-                  <div className="flex-1 flex flex-col border-r border-black/5">
-                    <div className="flex-none px-4 py-3 border-b border-black/5 bg-neutral-50">
-                      <p className="text-xs text-neutral-700 uppercase tracking-wider">Original</p>
+                  <div className="flex-1 flex flex-col border-r border-white/10">
+                    <div className="flex-none px-4 py-3 border-b border-white/10 bg-neutral-900/50">
+                      <p className="text-xs text-neutral-400 uppercase tracking-wider">Original</p>
                     </div>
                     <ScrollArea className="flex-1">
                       <div className="p-6">
-                        <p className="text-sm text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
                           {currentSegment.originalText}
                         </p>
                       </div>
@@ -295,12 +295,12 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
 
                   {/* Modernized */}
                   <div className="flex-1 flex flex-col">
-                    <div className="flex-none px-4 py-3 border-b border-black/5 bg-gradient-to-r from-purple-50 to-pink-50">
-                      <p className="text-xs text-purple-800 uppercase tracking-wider">Modernized</p>
+                    <div className="flex-none px-4 py-3 border-b border-white/10 bg-gradient-to-r from-purple-950/50 to-pink-950/50">
+                      <p className="text-xs text-purple-300 uppercase tracking-wider">Modernized</p>
                     </div>
                     <ScrollArea className="flex-1">
                       <div className="p-6">
-                        <p className="text-sm text-neutral-900 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">
                           {currentSegment.text}
                         </p>
                       </div>
@@ -310,7 +310,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
               ) : (
                 <ScrollArea className="h-full">
                   <div className="p-8">
-                    <p className="text-base leading-relaxed whitespace-pre-wrap">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap text-neutral-300">
                       {textView === "original" ? currentSegment.originalText : currentSegment.text}
                     </p>
                   </div>
@@ -320,11 +320,11 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
           </div>
 
           {/* Right Panel: Player Controls & Settings */}
-          <div className="w-80 bg-white/70 backdrop-blur-xl border-l border-black/5 flex flex-col">
-            <div className="flex-none px-6 py-4 border-b border-black/5">
+          <div className="w-80 bg-neutral-900/60 backdrop-blur-xl border-l border-white/10 flex flex-col">
+            <div className="flex-none px-6 py-4 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-purple-600" strokeWidth={2.5} />
-                <h4 className="text-sm">Playback</h4>
+                <Settings className="w-4 h-4 text-purple-400" strokeWidth={2.5} />
+                <h4 className="text-sm text-white">Playback</h4>
               </div>
             </div>
 
@@ -333,12 +333,12 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                 {/* Current Segment Info */}
                 <div>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                      <span className="text-purple-700">{currentSegmentIndex + 1}</span>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-950/50 to-pink-950/50 border border-purple-500/30 flex items-center justify-center backdrop-blur-sm">
+                      <span className="text-purple-300">{currentSegmentIndex + 1}</span>
                     </div>
                     <div>
-                      <p className="text-sm">Chunk #{currentSegment.chunkId}</p>
-                      <p className="text-xs text-neutral-600">
+                      <p className="text-sm text-white">Chunk #{currentSegment.chunkId}</p>
+                      <p className="text-xs text-neutral-400">
                         {formatTime(currentTime)} / {formatTime(duration)}
                       </p>
                     </div>
@@ -354,11 +354,11 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                   />
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Playback Controls */}
                 <div>
-                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Controls</h5>
+                  <h5 className="text-xs text-neutral-400 uppercase tracking-wider mb-3">Controls</h5>
                   
                   <div className="flex items-center justify-center gap-2 mb-4">
                     <Button
@@ -366,6 +366,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                       size="icon"
                       onClick={handlePreviousSegment}
                       disabled={currentSegmentIndex === 0}
+                      className="text-neutral-400 hover:text-white hover:bg-white/5"
                     >
                       <SkipBack className="w-4 h-4" strokeWidth={2.5} />
                     </Button>
@@ -374,6 +375,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                       variant="ghost"
                       size="icon"
                       onClick={skipBackward}
+                      className="text-neutral-400 hover:text-white hover:bg-white/5"
                     >
                       <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
                     </Button>
@@ -393,6 +395,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                       variant="ghost"
                       size="icon"
                       onClick={skipForward}
+                      className="text-neutral-400 hover:text-white hover:bg-white/5"
                     >
                       <RotateCcw className="w-4 h-4 rotate-180" strokeWidth={2.5} />
                     </Button>
@@ -402,6 +405,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                       size="icon"
                       onClick={handleNextSegment}
                       disabled={currentSegmentIndex === mockSegments.length - 1}
+                      className="text-neutral-400 hover:text-white hover:bg-white/5"
                     >
                       <SkipForward className="w-4 h-4" strokeWidth={2.5} />
                     </Button>
@@ -412,13 +416,13 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Volume Control */}
                 <div>
-                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Volume</h5>
+                  <h5 className="text-xs text-neutral-400 uppercase tracking-wider mb-3">Volume</h5>
                   <div className="flex items-center gap-3">
-                    <Volume2 className="w-4 h-4 text-neutral-600 flex-shrink-0" strokeWidth={2.5} />
+                    <Volume2 className="w-4 h-4 text-neutral-400 flex-shrink-0" strokeWidth={2.5} />
                     <Slider
                       value={[volume * 100]}
                       max={100}
@@ -426,15 +430,15 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                       onValueChange={(value) => setVolume(value[0] / 100)}
                       className="flex-1"
                     />
-                    <span className="text-sm text-neutral-600 w-12 text-right">{Math.round(volume * 100)}%</span>
+                    <span className="text-sm text-neutral-300 w-12 text-right">{Math.round(volume * 100)}%</span>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Speed Control */}
                 <div>
-                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Speed</h5>
+                  <h5 className="text-xs text-neutral-400 uppercase tracking-wider mb-3">Speed</h5>
                   <div className="grid grid-cols-3 gap-2">
                     {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) => (
                       <Button
@@ -442,7 +446,7 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                         variant={playbackSpeed === speed ? "default" : "outline"}
                         size="sm"
                         onClick={() => setPlaybackSpeed(speed)}
-                        className={playbackSpeed === speed ? "bg-purple-600" : ""}
+                        className={playbackSpeed === speed ? "bg-purple-600" : "border-white/20 text-neutral-300 hover:bg-white/5"}
                       >
                         {speed}x
                       </Button>
@@ -450,38 +454,38 @@ export function AudioPlayerView({ book, onBack, onCreateClip, onEditChunk, onReg
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Segment Stats */}
                 <div>
-                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Current Segment</h5>
+                  <h5 className="text-xs text-neutral-400 uppercase tracking-wider mb-3">Current Segment</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-neutral-600">Duration</span>
-                      <span className="tabular-nums">{formatTime(currentSegment.duration)}</span>
+                      <span className="text-neutral-400">Duration</span>
+                      <span className="tabular-nums text-neutral-300">{formatTime(currentSegment.duration)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-neutral-600">Words</span>
-                      <span className="tabular-nums">{currentSegment.text.split(/\s+/).length}</span>
+                      <span className="text-neutral-400">Words</span>
+                      <span className="tabular-nums text-neutral-300">{currentSegment.text.split(/\s+/).length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-neutral-600">Characters</span>
-                      <span className="tabular-nums">{currentSegment.text.length}</span>
+                      <span className="text-neutral-400">Characters</span>
+                      <span className="tabular-nums text-neutral-300">{currentSegment.text.length}</span>
                     </div>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Overall Progress */}
                 <div>
-                  <h5 className="text-xs text-neutral-600 uppercase tracking-wider mb-3">Progress</h5>
+                  <h5 className="text-xs text-neutral-400 uppercase tracking-wider mb-3">Progress</h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-neutral-600">Completed</span>
-                      <span className="tabular-nums">{currentSegmentIndex}/{mockSegments.length}</span>
+                      <span className="text-neutral-400">Completed</span>
+                      <span className="tabular-nums text-neutral-300">{currentSegmentIndex}/{mockSegments.length}</span>
                     </div>
-                    <div className="w-full bg-neutral-200 rounded-full h-2">
+                    <div className="w-full bg-neutral-700 rounded-full h-2">
                       <div 
                         className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all"
                         style={{ width: `${(currentSegmentIndex / mockSegments.length) * 100}%` }}
