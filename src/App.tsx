@@ -3,10 +3,8 @@ import { Header } from "./components/Header";
 import { LibraryView } from "./components/LibraryView";
 import { UploadScreen } from "./components/UploadScreen";
 import { ProjectSetup, ProjectConfig } from "./components/ProjectSetup";
-import { ChunkReview, Chunk } from "./components/ChunkReview";
-import { SegmentBuilder } from "./components/SegmentBuilder";
-import { EditorView } from "./components/EditorView";
-import { AudioPlayerView } from "./components/AudioPlayerView";
+import { ProjectView } from "./components/ProjectView";
+import { Chunk } from "./components/ChunkReview";
 import { EditionsView } from "./components/EditionsView";
 import { PublicLibraryView } from "./components/PublicLibraryView";
 import { FeedView } from "./components/FeedView";
@@ -34,6 +32,7 @@ export type AudioSegment = {
   chunkIndex: number;
   audioUrl: string;
   duration: number;
+  text?: string;
 };
 
 export type Edition = {
@@ -75,17 +74,17 @@ export type Clip = {
   createdAt: Date;
 };
 
-type View = "library" | "upload" | "project-setup" | "chunk-review" | "segment-builder" | "editor" | "player" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
+type View = "library" | "upload" | "project-setup" | "project" | "editions" | "public-library" | "feed" | "create-edition" | "create-clip";
 
 export default function App() {
   // Set browser tab title to show version and show welcome toast
   useEffect(() => {
-    document.title = "Audibler v2.2 - Smart Chunking Fixed";
+    document.title = "Audibler v2.3 - Unified Project View";
     
     // Show version notification
     setTimeout(() => {
-      toast.success("Smart Chunking v2.2", {
-        description: "Now handles books without paragraph breaks! Upload to test.",
+      toast.success("Audibler v2.3", {
+        description: "Everything is now in one unified Project View! Upload a book to try it.",
         duration: 5000,
       });
     }, 1000);
@@ -1050,6 +1049,7 @@ export default function App() {
     const newChunks = chunkText(selectedText);
     
     console.log(`✅ Created ${newChunks.length} chunks from selected text`);
+    console.log(`📝 First chunk preview:`, newChunks[0]?.originalText?.substring(0, 100) + "...");
 
     const newBook: Book = {
       id: Date.now().toString(),
@@ -1063,6 +1063,9 @@ export default function App() {
       chunks: newChunks, // Store chunks with the book
     };
 
+    console.log("📘 New book created:", newBook);
+    console.log("📚 Total chunks:", newChunks.length);
+    
     setBooks((prev) => [newBook, ...prev]);
     setSelectedBook(newBook);
     setChunks(newChunks);
@@ -1080,10 +1083,20 @@ export default function App() {
             : b
         )
       );
+      setSelectedBook((prev) =>
+        prev && prev.id === newBook.id
+          ? {
+              ...prev,
+              status: "modernized",
+              modernizedText: modernizeText(selectedText.slice(0, 2000)),
+            }
+          : prev
+      );
     }, 2000);
 
     setUploadedFile(null);
-    setCurrentView("chunk-review");
+    console.log("🔄 Switching to project view with book:", newBook.title);
+    setCurrentView("project");
   };
 
   const modernizeText = (text: string): string => {
@@ -1114,13 +1127,8 @@ export default function App() {
       );
     }
     
-    if (book.status === "audio-ready") {
-      setCurrentView("player");
-    } else if (book.status === "modernized" || book.status === "processing") {
-      setCurrentView("chunk-review");
-    } else {
-      setCurrentView("chunk-review");
-    }
+    // Always go to unified project view
+    setCurrentView("project");
   };
 
   const handleGenerateAudio = (book: Book) => {
@@ -1198,45 +1206,121 @@ export default function App() {
     );
   };
 
-  const [segmentConfig, setSegmentConfig] = useState({ chunksPerSegment: 3 });
 
-  const handleProceedToSegmentBuilder = (chunksPerSegment: number) => {
-    setSegmentConfig({ chunksPerSegment });
-    setCurrentView("segment-builder");
+
+  const handleUpdateBook = (bookId: string, updates: Partial<Book>) => {
+    setBooks((prev) =>
+      prev.map((b) => (b.id === bookId ? { ...b, ...updates } : b))
+    );
+    setSelectedBook((prev) =>
+      prev && prev.id === bookId ? { ...prev, ...updates } : prev
+    );
   };
 
-  const handleGenerateAudioSegments = (segments: any[]) => {
-    // Simulate audio generation from segments
-    if (selectedBook) {
-      const audioSegments = segments.map((seg, index) => ({
-        id: `seg-${Date.now()}-${index}`,
-        chunkIndex: seg.chunkIds[0],
-        audioUrl: `mock-audio-${index}.mp3`,
-        duration: seg.estimatedDuration,
-      }));
-
-      setBooks((prev) =>
-        prev.map((b) =>
-          b.id === selectedBook.id
-            ? {
-                ...b,
-                status: "audio-ready",
-                audioSegments,
-              }
-            : b
-        )
-      );
-      setSelectedBook((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "audio-ready",
-              audioSegments,
-            }
-          : null
-      );
-      setCurrentView("player");
+  const handleModernizeMoreChunks = (count?: number) => {
+    // Convert next batch of pending chunks (simulate API call)
+    const pendingChunks = chunks.filter(c => c.status === "pending");
+    
+    if (pendingChunks.length === 0) {
+      toast.success("Complete!", {
+        description: "All chunks have been modernized.",
+        duration: 2000,
+      });
+      return;
     }
+    
+    // Use provided count or default to 10
+    const batchSize = count !== undefined ? Math.min(count, pendingChunks.length) : 10;
+    const chunksToConvert = pendingChunks.slice(0, batchSize);
+    
+    toast.info("Modernization", {
+      description: `Converting ${chunksToConvert.length} chunks to Gen Z brainrot slang...`,
+      duration: 2000,
+    });
+    
+    // Simulate processing delay
+    setTimeout(() => {
+      setChunks(prev => prev.map(chunk => {
+        if (chunksToConvert.find(c => c.id === chunk.id)) {
+          // Apply brainrot transformation
+          let modernized = chunk.originalText
+            .replace(/\[\d+:\d+:\d+\]/g, "")
+            .replace(/^\d+\s*$/gm, "")
+            .replace(/^Chapter \d+$/gim, "")
+            .replace(/\bit is a truth universally acknowledged\b/gi, "No cap fam, it's giving main character energy")
+            .replace(/\bmust be in want of\b/gi, "is lowkey hunting for")
+            .replace(/\bmy dear Mr\. Bennet\b/gi, "Yo Mr. Bennet")
+            .replace(/\bsaid his lady to him\b/gi, "his wife was like")
+            .replace(/\breplied that he had not\b/gi, "straight up said nah I didn't hear that sis")
+            .replace(/\bmade no answer\b/gi, "left her on read. Man just ghosted her whole vibe check")
+            .replace(/\bcried his wife impatiently\b/gi, "his wife was giving impatient Karen energy rn")
+            .replace(/\breturned she\b/gi, "she clapped back")
+            .replace(/\bvery\b/gi, "literally")
+            .replace(/\breally\b/gi, "lowkey")
+            .replace(/\bquite\b/gi, "kinda")
+            .replace(/\bgood\b/gi, "bussin")
+            .replace(/\bbad\b/gi, "mid")
+            .replace(/\!(?=\s|$)/g, " fr!")
+            .replace(/\s+/g, " ")
+            .trim();
+          
+          return {
+            ...chunk,
+            modernizedText: modernized || chunk.originalText,
+            status: "completed" as const,
+          };
+        }
+        return chunk;
+      }));
+      
+      // Update the selected book's chunks and the book itself
+      if (selectedBook) {
+        const updatedChunks = chunks.map(chunk => {
+          if (chunksToConvert.find(c => c.id === chunk.id)) {
+            let modernized = chunk.originalText
+              .replace(/\[\d+:\d+:\d+\]/g, "")
+              .replace(/^\d+\s*$/gm, "")
+              .replace(/^Chapter \d+$/gim, "")
+              .replace(/\bit is a truth universally acknowledged\b/gi, "No cap fam, it's giving main character energy")
+              .replace(/\bmust be in want of\b/gi, "is lowkey hunting for")
+              .replace(/\bvery\b/gi, "literally")
+              .replace(/\breally\b/gi, "lowkey")
+              .replace(/\bquite\b/gi, "kinda")
+              .replace(/\bgood\b/gi, "bussin")
+              .replace(/\bbad\b/gi, "mid")
+              .replace(/\s+/g, " ")
+              .trim();
+            return { ...chunk, modernizedText: modernized, status: "completed" as const };
+          }
+          return chunk;
+        });
+        
+        setBooks(prev => prev.map(b => 
+          b.id === selectedBook.id ? { ...b, chunks: updatedChunks } : b
+        ));
+        
+        setSelectedBook(prev => 
+          prev ? { ...prev, chunks: updatedChunks } : prev
+        );
+      }
+      
+      const remainingPending = pendingChunks.length - chunksToConvert.length;
+      toast.success("Converted!", {
+        description: remainingPending > 0 
+          ? `${chunksToConvert.length} chunks converted. ${remainingPending} remaining.`
+          : "All chunks have been modernized!",
+        duration: 2000,
+      });
+    }, 500);
+  };
+
+  const handleGenerateAudioFromProject = () => {
+    // This is now handled inside ProjectView's Audio Files tab
+    // Just show a toast to confirm the action was triggered
+    toast.info("Audio Generation", {
+      description: "Generate audio from the Audio Files tab",
+      duration: 2000,
+    });
   };
 
   return (
@@ -1249,7 +1333,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        {currentView !== "project-setup" && currentView !== "chunk-review" && currentView !== "segment-builder" && (
+        {currentView !== "project-setup" && currentView !== "project" && (
           <Header
             currentView={currentView}
             onNavigate={(view) => {
@@ -1292,43 +1376,22 @@ export default function App() {
             />
           )}
 
-          {currentView === "chunk-review" && (
-            <ChunkReview
-              chunks={chunks}
-              onBack={() => setCurrentView("library")}
-              onEditChunk={handleEditChunk}
-              onProceedToSegmentBuilder={handleProceedToSegmentBuilder}
-            />
-          )}
-
-          {currentView === "segment-builder" && (
-            <SegmentBuilder
-              chunks={chunks}
-              chunksPerSegment={segmentConfig.chunksPerSegment}
-              onBack={() => setCurrentView("chunk-review")}
-              onGenerateAudio={handleGenerateAudioSegments}
-            />
-          )}
-
-          {currentView === "editor" && selectedBook && (
-            <EditorView
+          {currentView === "project" && selectedBook && (
+            <ProjectView
               book={selectedBook}
-              onBack={() => setCurrentView("library")}
-              onGenerateAudio={handleGenerateAudio}
-              onCreateEdition={() => {
-                setSelectedEdition(null);
-                setCurrentView("create-edition");
+              chunks={selectedBook.chunks || chunks}
+              onBack={() => {
+                setCurrentView("library");
+                setSelectedBook(null);
               }}
+              onUpdateBook={handleUpdateBook}
+              onEditChunk={handleEditChunk}
+              onModernizeMoreChunks={handleModernizeMoreChunks}
+              onGenerateAudio={handleGenerateAudioFromProject}
             />
           )}
 
-          {currentView === "player" && selectedBook && (
-            <AudioPlayerView
-              book={selectedBook}
-              onBack={() => setCurrentView("chunk-review")}
-              onCreateClip={() => setCurrentView("create-clip")}
-            />
-          )}
+
 
           {currentView === "editions" && (
             <EditionsView
@@ -1360,7 +1423,7 @@ export default function App() {
             <EditionCreator
               book={selectedBook}
               onSave={handleCreateEdition}
-              onCancel={() => setCurrentView("editor")}
+              onCancel={() => setCurrentView("project")}
             />
           )}
 
@@ -1368,7 +1431,7 @@ export default function App() {
             <ClipCreator
               book={selectedBook}
               onSave={handleCreateClip}
-              onCancel={() => setCurrentView("player")}
+              onCancel={() => setCurrentView("project")}
             />
           )}
         </main>

@@ -45,7 +45,7 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-black/5 shadow-sm">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-neutral-900/90 border-b border-white/10 shadow-xl">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5">
         <div className="flex items-center justify-between">
           <button
@@ -59,10 +59,10 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
               </div>
             </div>
             <div className="flex flex-col items-start">
-              <h1 className="text-lg sm:text-2xl tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl tracking-tight bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Audibler
               </h1>
-              <p className="hidden sm:block text-xs text-neutral-500 tracking-wide">Old books, reborn in modern voice • v2.2 (Smart chunking)</p>
+              <p className="hidden sm:block text-xs text-neutral-400 tracking-wide">Old books, reborn in modern voice • v2.2 (Smart chunking)</p>
             </div>
           </button>
 
@@ -75,7 +75,7 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
                 className={`px-4 lg:px-5 py-2.5 rounded-xl flex items-center gap-2.5 transition-all duration-200 ${
                   active
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25"
-                    : "text-neutral-600 hover:bg-black/5"
+                    : "text-neutral-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <Icon className="w-4 h-4" strokeWidth={2.5} />
@@ -87,13 +87,13 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
           {/* Mobile Menu Button */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <button className="md:hidden p-2 hover:bg-black/5 rounded-lg transition-colors">
+              <button className="md:hidden p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-400 hover:text-white">
                 <Menu className="w-6 h-6" strokeWidth={2.5} />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-neutral-900 border-white/10">
               <div className="flex flex-col gap-4 mt-8">
-                <h2 className="text-lg mb-4">Navigation</h2>
+                <h2 className="text-lg mb-4 text-white">Navigation</h2>
                 {navItems.map(({ view, icon: Icon, label, active }) => (
                   <button
                     key={view}
@@ -101,7 +101,7 @@ export function Header({ currentView, onNavigate, selectedBook }: HeaderProps) {
                     className={`px-5 py-3 rounded-xl flex items-center gap-3 transition-all duration-200 ${
                       active
                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
-                        : "text-neutral-600 hover:bg-neutral-100"
+                        : "text-neutral-400 hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     <Icon className="w-5 h-5" strokeWidth={2.5} />
