@@ -49,12 +49,11 @@ This is a new paragraph with multiple sentences for testing.`;
   });
 
   test('should display chunk list or editor view', async ({ page }) => {
-    // Look for chunk-related UI elements
-    const hasChunks =
-      (await page.getByText(/chunk|segment|paragraph/i).isVisible()) ||
-      (await page.locator('[data-testid*="chunk"], [class*="chunk"]').count()) > 0;
+    // Look for chunk-related UI elements - check count first to avoid strict mode violation
+    const chunkElements = await page.locator('[data-testid*="chunk"], [class*="chunk"]').count();
+    const hasChunkText = await page.getByText(/chunk|segment|paragraph/i).count() > 0;
 
-    expect(hasChunks).toBeTruthy();
+    expect(chunkElements > 0 || hasChunkText).toBeTruthy();
   });
 
   test('should show correct chunk count', async ({ page }) => {

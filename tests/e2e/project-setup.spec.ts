@@ -23,13 +23,13 @@ test.describe('Project Setup Configuration', () => {
       buffer: Buffer.from(testFileContent),
     });
 
-    // Wait for the book title to appear (showing uploaded filename)
-    await expect(page.getByText(/test-book/i)).toBeVisible({ timeout: 10000 });
+    // Wait for the book title to appear (showing uploaded filename) - use .first() to avoid strict mode violation
+    await expect(page.getByText(/test-book/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should display project setup form', async ({ page }) => {
     // Check for main form elements - the book title is displayed as a large editable heading
-    await expect(page.getByText(/test-book/i)).toBeVisible();
+    await expect(page.getByText(/test-book/i).first()).toBeVisible();
     // The form has sliders, instructions textarea, and cost estimates
     const hasFormElements = await page.locator('textarea').isVisible() ||
                             await page.locator('input[type="range"]').count() > 0;
@@ -38,7 +38,7 @@ test.describe('Project Setup Configuration', () => {
 
   test('should pre-fill title from filename', async ({ page }) => {
     // The title is displayed as text (clickable button), not an input field initially
-    await expect(page.getByText(/test-book/i)).toBeVisible();
+    await expect(page.getByText(/test-book/i).first()).toBeVisible();
   });
 
   test('should allow editing title', async ({ page }) => {
@@ -46,19 +46,25 @@ test.describe('Project Setup Configuration', () => {
     const titleButton = page.getByText(/test-book/i).first();
     await titleButton.click();
 
-    // Now an input should appear
-    const titleInput = page.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 2000 });
+    // Now an input should appear - look for any input (the Input component)
+    const titleInput = page.locator('input').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 5000 });
 
     await titleInput.clear();
     await titleInput.fill('My Custom Book Title');
 
-    // Press Enter or click save button to confirm
-    await page.keyboard.press('Enter');
+    // Click the save button (checkmark icon)
+    const saveButton = page.getByRole('button').filter({ has: page.locator('svg') }).first();
+    if (await saveButton.isVisible()) {
+      await saveButton.click();
+    } else {
+      // Fallback: press Enter
+      await page.keyboard.press('Enter');
+    }
     await page.waitForTimeout(500);
 
     // Verify the new title is displayed
-    await expect(page.getByText(/My Custom Book Title/i)).toBeVisible();
+    await expect(page.getByText(/My Custom Book Title/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('should allow editing author', async ({ page }) => {
@@ -103,17 +109,17 @@ test.describe('Project Setup Configuration', () => {
   });
 
   test('should display book statistics', async ({ page }) => {
-    // Check for stats - look for numbers with units
-    const hasWordCount = await page.getByText(/\d+.*word/i).isVisible();
-    const hasCharCount = await page.getByText(/\d+.*character/i).isVisible();
-    const hasStats = hasWordCount || hasCharCount;
+    // Check for stats - look for numbers with units - use count to avoid strict mode
+    const wordCount = await page.getByText(/\d+.*word/i).count();
+    const charCount = await page.getByText(/\d+.*character/i).count();
+    const hasStats = wordCount > 0 || charCount > 0;
     expect(hasStats).toBeTruthy();
   });
 
   test('should display cost estimation', async ({ page }) => {
-    // Check for cost estimates - look for dollar amounts or "cost"
-    const hasCost = await page.getByText(/\$\d+|\d+.*cost/i).isVisible();
-    expect(hasCost).toBeTruthy();
+    // Check for cost estimates - look for dollar amounts or "cost" - use count to avoid strict mode
+    const costCount = await page.getByText(/\$\d+|\d+.*cost/i).count();
+    expect(costCount).toBeGreaterThan(0);
   });
 
   test('should allow selecting book range with sliders', async ({ page }) => {
@@ -167,10 +173,10 @@ test.describe('Project Setup Configuration', () => {
   });
 
   test('should have cancel button', async ({ page }) => {
-    // Look for back/cancel button - there's a "Back to Upload" button
+    // Look for back/cancel button - there's both "Back to Upload" and "Cancel" - use .first()
     const backButton = page.getByRole('button', { name: /back|cancel/i });
 
-    await expect(backButton).toBeVisible();
+    await expect(backButton.first()).toBeVisible();
   });
 
   test('should return to library when canceling', async ({ page }) => {
@@ -178,8 +184,8 @@ test.describe('Project Setup Configuration', () => {
     const backButton = page.getByRole('button', { name: /back/i });
     await backButton.click();
 
-    // Should be back at upload screen with "Drop your book here"
-    await expect(page.getByText(/drop your book here|upload/i)).toBeVisible();
+    // Should be back at upload screen with "Drop your book here" - use .first() for strict mode
+    await expect(page.getByText(/drop your book here|upload/i).first()).toBeVisible();
   });
 
   test('should proceed to next step when starting process', async ({ page }) => {
@@ -218,14 +224,14 @@ test.describe('Project Setup Configuration', () => {
 
   test('should display all configuration sections', async ({ page }) => {
     // Verify key sections are present
-    await expect(page.getByText(/test-book/i)).toBeVisible(); // Title
+    await expect(page.getByText(/test-book/i).first()).toBeVisible(); // Title
 
     // Check for configuration elements
     const hasTextarea = await page.locator('textarea').count() > 0; // Instructions
     const hasSliders = await page.locator('input[type="range"]').count() > 0; // Range sliders
-    const hasStats = await page.getByText(/\d+.*word/i).isVisible(); // Statistics
+    const statsCount = await page.getByText(/\d+.*word/i).count(); // Statistics - use count for strict mode
 
     // At least some configuration UI should be present
-    expect(hasTextarea || hasSliders || hasStats).toBeTruthy();
+    expect(hasTextarea || hasSliders || statsCount > 0).toBeTruthy();
   });
 });
