@@ -42,8 +42,8 @@ test.describe('Book Upload Flow', () => {
     const uploadButton = page.getByRole('button', { name: /^upload book$/i });
     await uploadButton.click();
 
-    // Check for upload zone elements
-    await expect(page.getByText(/drag.*drop|upload zone/i)).toBeVisible();
+    // Check for upload zone elements - looking for "Drop your book here"
+    await expect(page.getByText(/drop your book here/i)).toBeVisible();
     await expect(page.getByText(/.txt/i)).toBeVisible(); // Should mention .txt file support
   });
 
@@ -68,8 +68,8 @@ test.describe('Book Upload Flow', () => {
     // Wait for file to be processed
     await page.waitForTimeout(1000);
 
-    // Check if project setup screen appears or file is listed
-    await expect(page.getByText(/test-book|project setup|configure/i)).toBeVisible({ timeout: 5000 });
+    // Check if the book title appears (filename without extension)
+    await expect(page.getByText(/test-book/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('should validate file type', async ({ page }) => {
@@ -110,11 +110,14 @@ test.describe('Book Upload Flow', () => {
       buffer: Buffer.from(testFileContent),
     });
 
-    // Wait for project setup screen
-    await expect(page.getByText(/project setup|configure/i)).toBeVisible({ timeout: 5000 });
+    // Wait for the book title to appear (project setup shows filename as title)
+    await expect(page.getByText(/statistics-test/i)).toBeVisible({ timeout: 5000 });
 
-    // Check for statistics (word count, character count, etc.)
-    await expect(page.getByText(/word|character|chunk/i)).toBeVisible();
+    // Check for statistics (word count, character count, etc.) - look for specific stat labels
+    const hasStats = await page.getByText(/\d+.*word/i).isVisible() ||
+                     await page.getByText(/\d+.*character/i).isVisible() ||
+                     await page.getByText(/\d+.*chunk/i).isVisible();
+    expect(hasStats).toBeTruthy();
   });
 
   test('should allow canceling upload', async ({ page }) => {
