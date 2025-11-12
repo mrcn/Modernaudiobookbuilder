@@ -1,1 +1,10 @@
 node_modules
+dist
+build
+.DS_Store
+
+# Test artifacts
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
